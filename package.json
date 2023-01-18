@@ -1,5 +1,5 @@
 {
-  "private": true,
+  "private": false,
   "displayName": "Komfovent Ping2 Platform",
   "name": "@rnsc/homebridge-komfovent-ping2-platform",
   "version": "0.0.1",
