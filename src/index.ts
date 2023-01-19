@@ -1,11 +1,11 @@
 import { API } from 'homebridge';
 
 import { PLATFORM_NAME } from './settings';
-import { HomebridgeKomfoventPing2 } from './platform';
+import { KomfoventPing2Platform } from './platform';
 
 /**
  * This method registers the platform with Homebridge
  */
 export = (api: API) => {
-  api.registerPlatform(PLATFORM_NAME, HomebridgeKomfoventPing2);
+  api.registerPlatform(PLATFORM_NAME, KomfoventPing2Platform);
 };

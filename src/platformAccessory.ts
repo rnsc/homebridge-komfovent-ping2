@@ -1,6 +1,6 @@
 import { Service, PlatformAccessory, CharacteristicValue, PlatformConfig } from 'homebridge';
 
-import { HomebridgeKomfoventPing2 } from './platform';
+import { KomfoventPing2Platform } from './platform';
 
 import { Device } from './types';
 
@@ -12,7 +12,7 @@ export class KomfoventPing2Accessory {
   private lastSpeedChangeTime = 0;
 
   constructor(
-    private readonly platform: HomebridgeKomfoventPing2,
+    private readonly platform: KomfoventPing2Platform,
     private readonly accessory: PlatformAccessory,
     private readonly device: Device,
     private readonly config: PlatformConfig,
@@ -24,11 +24,11 @@ export class KomfoventPing2Accessory {
       .setCharacteristic(this.platform.Characteristic.Model, 'Ping2')
       .setCharacteristic(this.platform.Characteristic.SerialNumber, 'DomektC4Ping2');
 
-    this.service = this.accessory.getService(this.platform.Service.Fanv2) || this.accessory.addService(this.platform.Service.Fanv2);
+    this.service = this.accessory.getService(this.platform.Service.Fan) || this.accessory.addService(this.platform.Service.Fan);
 
     this.service.setCharacteristic(this.platform.Characteristic.Name, device.name);
 
-    this.service.getCharacteristic(this.platform.Characteristic.Active)
+    this.service.getCharacteristic(this.platform.Characteristic.On)
       .onSet(this.setActive.bind(this))
       .onGet(this.getActive.bind(this));
 
@@ -36,8 +36,8 @@ export class KomfoventPing2Accessory {
     this.service.getCharacteristic(this.platform.Characteristic.RotationSpeed)
       .onSet(this.setRotationSpeed.bind(this))
       .setProps({
-        minValue: 20,
-        maxValue: 80,
+        minValue: 0,
+        maxValue: 100,
         minStep: 5,
       });
 

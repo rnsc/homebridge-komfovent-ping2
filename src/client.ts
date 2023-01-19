@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import {HomebridgeKomfoventPing2} from './platform';
+import {KomfoventPing2Platform} from './platform';
 import axios from 'axios';
 import { PlatformConfig } from 'homebridge';
 import { Device } from './types';
 
 export class Ping2JsonClient {
 
-  constructor(private readonly platform: HomebridgeKomfoventPing2,
+  constructor(private readonly platform: KomfoventPing2Platform,
               private readonly device: Device,
               private readonly config: PlatformConfig) {
   }
@@ -18,7 +18,7 @@ export class Ping2JsonClient {
         'Accept': 'application/json',
       },
     }).then((response)=>{
-      this.platform.log.info(`Reply from Python JSON API: ${response.data}`);
+      this.platform.log.info(`Reply from Python JSON API: ${JSON.stringify(response.data)}`);
       return response.data;
     })
       .catch((error) => {
