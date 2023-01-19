@@ -43,9 +43,9 @@ export class KomfoventPing2Accessory {
 
     this.client = new Ping2JsonClient(platform, this.device, this.config);
 
-    setInterval(() => {
-      this.platform.log.warn('setInterval');
-    }, 10000);
+    //setInterval(() => {
+    //  this.platform.log.warn('setInterval');
+    //}, 10000);
   }
 
   async getActive(): Promise<CharacteristicValue> {
