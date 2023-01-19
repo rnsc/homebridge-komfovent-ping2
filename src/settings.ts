@@ -1,4 +1,4 @@
 
-export const PLATFORM_NAME = 'KomfoventPing2Platform';
+export const PLATFORM_NAME = 'KomfoventPing2';
 
-export const PLUGIN_NAME = '@rnsc/homebridge-komfovent-ping2-platform';
+export const PLUGIN_NAME = '@rnsc/homebridge-komfovent-ping2';

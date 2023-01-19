@@ -1,4 +1,4 @@
-# Homebridge Komfovent Ping2 Platform
+# Homebridge Komfovent Ping2
 
 ![homebridge-logo](https://github.com/homebridge/branding/raw/master/logos/homebridge-wordmark-logo-vertical.png)
 

@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import {HomebridgeKomfoventPing2Platform} from './platform';
+import {HomebridgeKomfoventPing2} from './platform';
 import axios from 'axios';
 import { PlatformConfig } from 'homebridge';
 import { Device } from './types';
 
 export class Ping2JsonClient {
 
-  constructor(private readonly platform: HomebridgeKomfoventPing2Platform,
+  constructor(private readonly platform: HomebridgeKomfoventPing2,
               private readonly device: Device,
               private readonly config: PlatformConfig) {
   }

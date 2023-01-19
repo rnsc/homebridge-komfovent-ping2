@@ -1,18 +1,18 @@
 import { Service, PlatformAccessory, CharacteristicValue, PlatformConfig } from 'homebridge';
 
-import { HomebridgeKomfoventPing2Platform } from './platform';
+import { HomebridgeKomfoventPing2 } from './platform';
 
 import { Device } from './types';
 
 import { Ping2JsonClient } from './client';
 
-export class KomfoventPing2PlatformAccessory {
+export class KomfoventPing2Accessory {
   private service: Service;
   private client: Ping2JsonClient;
   private lastSpeedChangeTime = 0;
 
   constructor(
-    private readonly platform: HomebridgeKomfoventPing2Platform,
+    private readonly platform: HomebridgeKomfoventPing2,
     private readonly accessory: PlatformAccessory,
     private readonly device: Device,
     private readonly config: PlatformConfig,

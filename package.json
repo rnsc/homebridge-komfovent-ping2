@@ -1,16 +1,16 @@
 {
   "private": false,
-  "displayName": "Komfovent Ping2 Platform",
-  "name": "@rnsc/homebridge-komfovent-ping2-platform",
+  "displayName": "Komfovent Ping2",
+  "name": "@rnsc/homebridge-komfovent-ping2",
   "version": "0.1.0",
   "description": "Homebridge plugin to control a Komfovent unit through a PING2 module over HTTP.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/rnsc/homebridge-komfovent-ping2-platform.git"
+    "url": "https://github.com/rnsc/homebridge-komfovent-ping2.git"
   },
   "bugs": {
-    "url": "https://github.com/rnsc/homebridge-komfovent-ping2-platform/issues"
+    "url": "https://github.com/rnsc/homebridge-komfovent-ping2/issues"
   },
   "engines": {
     "node": ">=14.18.1",

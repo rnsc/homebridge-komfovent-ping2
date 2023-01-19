@@ -1,9 +1,9 @@
 import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
 
 import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
-import { KomfoventPing2PlatformAccessory } from './platformAccessory';
+import { KomfoventPing2Accessory } from './platformAccessory';
 
-export class HomebridgeKomfoventPing2Platform implements DynamicPlatformPlugin {
+export class HomebridgeKomfoventPing2 implements DynamicPlatformPlugin {
   public readonly Service: typeof Service = this.api.hap.Service;
   public readonly Characteristic: typeof Characteristic = this.api.hap.Characteristic;
 
@@ -35,11 +35,11 @@ export class HomebridgeKomfoventPing2Platform implements DynamicPlatformPlugin {
 
       if (existingAccessory) {
         this.log.info('Restoring existing accessory from cache:', existingAccessory.displayName);
-        new KomfoventPing2PlatformAccessory(this, existingAccessory, device, this.config);
+        new KomfoventPing2Accessory(this, existingAccessory, device, this.config);
       } else {
         this.log.info('Adding new accessory:', device.name);
         const accessory = new this.api.platformAccessory(device.name, uuid);
-        new KomfoventPing2PlatformAccessory(this, accessory, device, this.config);
+        new KomfoventPing2Accessory(this, accessory, device, this.config);
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
       }
     }
