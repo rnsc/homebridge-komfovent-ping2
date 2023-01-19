@@ -10,5 +10,3 @@ Ideally the functions covered will be:
 
 * ON/OFF
 * Set the fan speed by 5% increment through the fan accessory in Homekit
-
-Package currently in development and doesn't function properly (01/2023)
