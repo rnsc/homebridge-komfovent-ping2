@@ -4,7 +4,7 @@
 
 Due to the lack of capabilities of the PING2 module provided by Komfovent (no API, simple HTML forms), this plugin aims at exposing the Komfovent Domekt unit as a simple fan.
 
-The plugin relies on a middleware server written in Python to abstract the rather awful HTML forms from the PING2 module for the Homebridge code.
+The plugin relies on a middleware server written in Python to abstract the rather awful HTML forms from the PING2 module for the Homebridge code. [link](https://github.com/rnsc/komfovent-ping2-json-server)
 
 Ideally the functions covered will be:
 
