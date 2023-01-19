@@ -26,7 +26,7 @@ export class KomfoventPing2PlatformAccessory {
 
     this.service = this.accessory.getService(this.platform.Service.Fanv2) || this.accessory.addService(this.platform.Service.Fanv2);
 
-    this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.komfoventDisplayName);
+    this.service.setCharacteristic(this.platform.Characteristic.Name, device.name);
 
     this.service.getCharacteristic(this.platform.Characteristic.Active)
       .onSet(this.setActive.bind(this))

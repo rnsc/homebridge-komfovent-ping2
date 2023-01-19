@@ -13,11 +13,14 @@ export class Ping2JsonClient {
 
   async getStatus(): Promise<{ active: string ; speed: number }> {
     this.platform.log.info('Get status');
-    return axios.get(this.config.url, {
+    return axios.get(this.device.url, {
       headers:{
         'Accept': 'application/json',
       },
-    }).then((response)=>response.data)
+    }).then((response)=>{
+      this.platform.log.info(`Reply from Python JSON API: ${response.data}`);
+      return response.data;
+    })
       .catch((error) => {
         this.platform.log.error('Error with getRequest:', error);
         return Promise.resolve();
@@ -26,7 +29,7 @@ export class Ping2JsonClient {
 
   async setPower(value: string) {
     this.platform.log.info('Turn on/off ->', value.toString());
-    return this.putRequest(this.device.deviceId, { 'power': value }, 'setPower', 'Error updating power:');
+    return this.putRequest(this.device.deviceId, { 'active': value }, 'setPower', 'Error updating power:');
   }
 
   async setSpeed(value: number) {
@@ -35,8 +38,8 @@ export class Ping2JsonClient {
   }
 
   private putRequest(deviceId: string, requestData: any, caller: string, errorHeader: string): Promise<boolean>{
-    this.platform.log.debug(`${caller}-> requestData: ${JSON.stringify(requestData)}`);
-    return axios.put(this.config.url,
+    this.platform.log.info(`${caller}-> requestData: ${JSON.stringify(requestData)}`);
+    return axios.put(this.device.url,
       requestData, {
         headers: {
           'Accept': 'application/json',
@@ -44,7 +47,7 @@ export class Ping2JsonClient {
         },
       })
       .then(res => {
-        this.platform.log.debug(`${caller}-> device: ${deviceId}; response:${JSON.stringify(res.data)}`);
+        this.platform.log.info(`${caller}-> device: ${deviceId}; response:${JSON.stringify(res.data)}`);
         return true;
       })
       .catch((error) => {
