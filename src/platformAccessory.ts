@@ -40,7 +40,7 @@ export class KomfoventPing2Accessory {
       .onGet(this.getRotationSpeed.bind(this))
       .setProps({
         minValue: 0,
-        maxValue: 100,
+        maxValue: 99,
         minStep: 33,
       });
 
@@ -65,17 +65,19 @@ export class KomfoventPing2Accessory {
     this.client.disconnect();
   }
 
-  // Maps ventilation level (1-3) to HomeKit RotationSpeed percentage
+  // Maps ventilation level (1-3) to HomeKit RotationSpeed (0, 33, 66, 99)
   private levelToPercent(level: number): number {
-    return Math.round((level / 3) * 100);
+    return level * 33;
   }
 
-  // Maps HomeKit RotationSpeed percentage to ventilation level (1-3)
+  // Maps HomeKit RotationSpeed (0, 33, 66, 99) to ventilation level (1-3)
   private percentToLevel(percent: number): number {
-    if (percent <= 0) {
+    if (percent <= 33) {
       return 1;
+    } else if (percent <= 66) {
+      return 2;
     }
-    return Math.min(3, Math.max(1, Math.round((percent / 100) * 3)));
+    return 3;
   }
 
   private async pollStatus(): Promise<void> {

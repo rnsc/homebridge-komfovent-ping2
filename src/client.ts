@@ -54,12 +54,23 @@ export class ModbusClient {
     return result;
   }
 
+  private closeExistingConnection(): void {
+    try {
+      if (this.client.isOpen) {
+        this.client.close(() => { /* noop */ });
+      }
+    } catch {
+      // ignore close errors on stale connections
+    }
+  }
+
   private async ensureConnection(): Promise<void> {
     if (this.connected && this.client.isOpen) {
       return;
     }
 
     this.connected = false;
+    this.closeExistingConnection();
 
     try {
       this.client = new ModbusRTU();
@@ -94,6 +105,7 @@ export class ModbusClient {
         };
       } catch (error) {
         this.connected = false;
+        this.closeExistingConnection();
         this.log.error('Failed to read status:', error);
         throw error;
       }
@@ -109,6 +121,7 @@ export class ModbusClient {
         this.log.info(`Power set to ${on ? 'ON' : 'OFF'}`);
       } catch (error) {
         this.connected = false;
+        this.closeExistingConnection();
         this.log.error('Failed to set power:', error);
         throw error;
       }
@@ -129,6 +142,7 @@ export class ModbusClient {
         this.log.info(`Ventilation level set to ${level}`);
       } catch (error) {
         this.connected = false;
+        this.closeExistingConnection();
         this.log.error('Failed to set ventilation level:', error);
         throw error;
       }
@@ -136,9 +150,7 @@ export class ModbusClient {
   }
 
   disconnect(): void {
-    if (this.client.isOpen) {
-      this.client.close(() => { /* noop */ });
-      this.connected = false;
-    }
+    this.connected = false;
+    this.closeExistingConnection();
   }
 }

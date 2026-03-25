@@ -59,6 +59,7 @@ export class KomfoventPing2Platform implements DynamicPlatformPlugin {
         this.log.info('Adding new accessory:', device.name);
         const accessory = new this.api.platformAccessory(device.name, uuid);
         accessory.context.device = device;
+        this.accessories.set(uuid, accessory);
         this.activeAccessories.push(new KomfoventPing2Accessory(this, accessory));
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
       }
