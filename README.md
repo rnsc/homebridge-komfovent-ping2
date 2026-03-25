@@ -42,7 +42,7 @@ Add the platform to your Homebridge `config.json`:
 |-------|----------|---------|-------------|
 | `name` | Yes | — | Display name in HomeKit |
 | `host` | Yes | — | IP address or hostname of the PING2 module |
-| `deviceId` | Yes | — | 16-character alphanumeric ID for HomeKit UUID generation |
+| `deviceId` | Yes | — | 16-character ID (A-Z, a-z, 0-9, _) for HomeKit UUID generation |
 | `port` | No | `502` | Modbus TCP port |
 | `slaveId` | No | `1` | Modbus slave ID (1-254) |
 
