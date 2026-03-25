@@ -132,15 +132,15 @@ export class ModbusClient {
 
   async setPower(on: boolean): Promise<void> {
     return this.serialize(async () => {
-      await this.ensureConnection();
-
       try {
+        await this.ensureConnection();
         await this.client.writeRegister(C4_REGISTERS.START_STOP, on ? 1 : 0);
         this.invalidateCache();
         this.log.info(`Power set to ${on ? 'ON' : 'OFF'}`);
       } catch (error) {
         this.connected = false;
         this.closeExistingConnection();
+        this.invalidateCache();
         this.log.error('Failed to set power:', error);
         throw error;
       }
@@ -152,9 +152,8 @@ export class ModbusClient {
     speed = Math.min(95, Math.max(5, speed));
 
     return this.serialize(async () => {
-      await this.ensureConnection();
-
       try {
+        await this.ensureConnection();
         await this.client.writeRegister(C4_REGISTERS.INTAKE_LEVEL_2, speed);
         await this.client.writeRegister(C4_REGISTERS.EXHAUST_LEVEL_2, speed);
         this.invalidateCache();
@@ -162,6 +161,7 @@ export class ModbusClient {
       } catch (error) {
         this.connected = false;
         this.closeExistingConnection();
+        this.invalidateCache();
         this.log.error('Failed to set Mode 2 speed:', error);
         throw error;
       }
@@ -170,9 +170,8 @@ export class ModbusClient {
 
   async syncClock(): Promise<void> {
     return this.serialize(async () => {
-      await this.ensureConnection();
-
       try {
+        await this.ensureConnection();
         const now = new Date();
         const time = (now.getHours() << 8) | now.getMinutes();
         const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay();
@@ -187,6 +186,7 @@ export class ModbusClient {
       } catch (error) {
         this.connected = false;
         this.closeExistingConnection();
+        this.invalidateCache();
         this.log.error('Failed to sync clock:', error);
         throw error;
       }
