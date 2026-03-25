@@ -5,6 +5,7 @@ import type { Device } from './types';
 import { ModbusClient } from './client';
 
 const POLL_INTERVAL_MS = 30_000;
+const CLOCK_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 export class KomfoventPing2Accessory {
   private readonly fanService: Service;
@@ -12,6 +13,7 @@ export class KomfoventPing2Accessory {
   private readonly client: ModbusClient;
   private readonly device: Device;
   private readonly pollInterval: ReturnType<typeof setInterval>;
+  private readonly clockSyncInterval: ReturnType<typeof setInterval>;
 
   constructor(
     private readonly platform: KomfoventPing2Platform,
@@ -58,11 +60,24 @@ export class KomfoventPing2Accessory {
 
     // Poll periodically to push state updates
     this.pollInterval = setInterval(() => this.pollStatus(), POLL_INTERVAL_MS);
+
+    // Sync PING2 clock from server time on startup and once per day
+    this.syncClock();
+    this.clockSyncInterval = setInterval(() => this.syncClock(), CLOCK_SYNC_INTERVAL_MS);
   }
 
   shutdown(): void {
     clearInterval(this.pollInterval);
+    clearInterval(this.clockSyncInterval);
     this.client.disconnect();
+  }
+
+  private async syncClock(): Promise<void> {
+    try {
+      await this.client.syncClock();
+    } catch {
+      this.platform.log.debug('Clock sync failed, will retry next interval');
+    }
   }
 
   private async pollStatus(): Promise<void> {

@@ -21,6 +21,10 @@ export const C4_REGISTERS = {
   FAN_STATUS: 1114,
   SUPPLY_FAN_SPEED: 1115,
   EXHAUST_FAN_SPEED: 1116,
+  TIME: 1002,
+  DAY_OF_WEEK: 1003,
+  MONTH_DAY: 1004,
+  YEAR: 1005,
   SUPPLY_AIR_TEMP: 1200,
   SETPOINT_TEMP: 1201,
 } as const;
@@ -160,6 +164,31 @@ export class ModbusClient {
         this.connected = false;
         this.closeExistingConnection();
         this.log.error('Failed to set Mode 2 speed:', error);
+        throw error;
+      }
+    });
+  }
+
+  async syncClock(): Promise<void> {
+    return this.serialize(async () => {
+      await this.ensureConnection();
+
+      try {
+        const now = new Date();
+        const time = (now.getHours() << 8) | now.getMinutes();
+        const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay();
+        const monthDay = ((now.getMonth() + 1) << 8) | now.getDate();
+        const year = now.getFullYear();
+
+        await this.client.writeRegister(C4_REGISTERS.TIME, time);
+        await this.client.writeRegister(C4_REGISTERS.DAY_OF_WEEK, dayOfWeek);
+        await this.client.writeRegister(C4_REGISTERS.MONTH_DAY, monthDay);
+        await this.client.writeRegister(C4_REGISTERS.YEAR, year);
+        this.log.info(`Clock synced to ${now.toLocaleString()}`);
+      } catch (error) {
+        this.connected = false;
+        this.closeExistingConnection();
+        this.log.error('Failed to sync clock:', error);
         throw error;
       }
     });
