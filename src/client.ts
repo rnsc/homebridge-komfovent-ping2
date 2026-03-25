@@ -38,6 +38,9 @@ export class ModbusClient {
   private client: ModbusRTU;
   private connected = false;
   private operationQueue: Promise<unknown> = Promise.resolve();
+  private cachedStatus: UnitStatus | null = null;
+  private cachedStatusTime = 0;
+  private static readonly STATUS_CACHE_TTL_MS = 2000;
 
   constructor(
     private readonly log: Logging,
@@ -85,6 +88,11 @@ export class ModbusClient {
   }
 
   async getStatus(): Promise<UnitStatus> {
+    const now = Date.now();
+    if (this.cachedStatus && (now - this.cachedStatusTime) < ModbusClient.STATUS_CACHE_TTL_MS) {
+      return this.cachedStatus;
+    }
+
     return this.serialize(async () => {
       await this.ensureConnection();
 
@@ -93,7 +101,7 @@ export class ModbusClient {
         const ventilation = await this.client.readHoldingRegisters(C4_REGISTERS.VENTILATION_LEVEL, 17);
         const temps = await this.client.readHoldingRegisters(C4_REGISTERS.SUPPLY_AIR_TEMP, 2);
 
-        return {
+        const status: UnitStatus = {
           active: general.data[0] === 1,
           mode2Speed: ventilation.data[4],           // reg 1104 — Mode 2 intake intensity
           supplyFanSpeed: ventilation.data[15],      // reg 1115
@@ -101,6 +109,10 @@ export class ModbusClient {
           supplyAirTemp: temps.data[0] / 10,         // reg 1200, value is 10x
           setpointTemp: temps.data[1] / 10,          // reg 1201, value is 10x
         };
+
+        this.cachedStatus = status;
+        this.cachedStatusTime = Date.now();
+        return status;
       } catch (error) {
         this.connected = false;
         this.closeExistingConnection();
