@@ -94,9 +94,9 @@ export class KomfoventPing2Accessory {
       const hapError = new this.platform.api.hap.HapStatusError(
         this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE,
       );
-      this.fanService.updateCharacteristic(this.platform.Characteristic.On, hapError);
-      this.fanService.updateCharacteristic(this.platform.Characteristic.RotationSpeed, hapError);
-      this.temperatureService.updateCharacteristic(this.platform.Characteristic.CurrentTemperature, hapError);
+      this.fanService.getCharacteristic(this.platform.Characteristic.On).updateValue(hapError);
+      this.fanService.getCharacteristic(this.platform.Characteristic.RotationSpeed).updateValue(hapError);
+      this.temperatureService.getCharacteristic(this.platform.Characteristic.CurrentTemperature).updateValue(hapError);
     }
   }
 

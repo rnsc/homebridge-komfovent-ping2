@@ -104,9 +104,8 @@ export class ModbusClient {
 
     this.statusPromiseTime = now;
     this.statusPromise = this.serialize(async () => {
-      await this.ensureConnection();
-
       try {
+        await this.ensureConnection();
         const general = await this.client.readHoldingRegisters(C4_REGISTERS.START_STOP, 1);
         const ventilation = await this.client.readHoldingRegisters(C4_REGISTERS.VENTILATION_LEVEL, 17);
         const temps = await this.client.readHoldingRegisters(C4_REGISTERS.SUPPLY_AIR_TEMP, 2);
