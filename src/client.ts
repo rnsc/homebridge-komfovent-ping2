@@ -56,6 +56,11 @@ export class ModbusClient {
     return result;
   }
 
+  private invalidateCache(): void {
+    this.cachedStatus = null;
+    this.cachedStatusTime = 0;
+  }
+
   private closeExistingConnection(): void {
     try {
       if (this.client.isOpen) {
@@ -128,6 +133,7 @@ export class ModbusClient {
 
       try {
         await this.client.writeRegister(C4_REGISTERS.START_STOP, on ? 1 : 0);
+        this.invalidateCache();
         this.log.info(`Power set to ${on ? 'ON' : 'OFF'}`);
       } catch (error) {
         this.connected = false;
@@ -148,6 +154,7 @@ export class ModbusClient {
       try {
         await this.client.writeRegister(C4_REGISTERS.INTAKE_LEVEL_2, speed);
         await this.client.writeRegister(C4_REGISTERS.EXHAUST_LEVEL_2, speed);
+        this.invalidateCache();
         this.log.info(`Mode 2 speed set to ${speed}% (intake + exhaust)`);
       } catch (error) {
         this.connected = false;

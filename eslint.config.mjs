@@ -6,6 +6,14 @@ export default tseslint.config(
     ignores: ['dist/**'],
   },
   {
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+    },
+  },
+  eslint.configs.recommended,
+  ...tseslint.configs.recommended,
+  {
     rules: {
       'quotes': ['error', 'single'],
       'indent': ['error', 2, { 'SwitchCase': 1 }],
@@ -31,12 +39,4 @@ export default tseslint.config(
       '@typescript-eslint/explicit-module-boundary-types': 'off',
     },
   },
-  {
-    languageOptions: {
-      ecmaVersion: 2022,
-      sourceType: 'module',
-    },
-  },
-  eslint.configs.recommended,
-  ...tseslint.configs.recommended,
 );
