@@ -38,8 +38,8 @@ export class ModbusClient {
   private client: ModbusRTU;
   private connected = false;
   private operationQueue: Promise<unknown> = Promise.resolve();
-  private cachedStatus: UnitStatus | null = null;
-  private cachedStatusTime = 0;
+  private statusPromise: Promise<UnitStatus> | null = null;
+  private statusPromiseTime = 0;
   private static readonly STATUS_CACHE_TTL_MS = 2000;
 
   constructor(
@@ -57,8 +57,8 @@ export class ModbusClient {
   }
 
   private invalidateCache(): void {
-    this.cachedStatus = null;
-    this.cachedStatusTime = 0;
+    this.statusPromise = null;
+    this.statusPromiseTime = 0;
   }
 
   private closeExistingConnection(): void {
@@ -94,11 +94,12 @@ export class ModbusClient {
 
   async getStatus(): Promise<UnitStatus> {
     const now = Date.now();
-    if (this.cachedStatus && (now - this.cachedStatusTime) < ModbusClient.STATUS_CACHE_TTL_MS) {
-      return this.cachedStatus;
+    if (this.statusPromise && (now - this.statusPromiseTime) < ModbusClient.STATUS_CACHE_TTL_MS) {
+      return this.statusPromise;
     }
 
-    return this.serialize(async () => {
+    this.statusPromiseTime = now;
+    this.statusPromise = this.serialize(async () => {
       await this.ensureConnection();
 
       try {
@@ -106,7 +107,7 @@ export class ModbusClient {
         const ventilation = await this.client.readHoldingRegisters(C4_REGISTERS.VENTILATION_LEVEL, 17);
         const temps = await this.client.readHoldingRegisters(C4_REGISTERS.SUPPLY_AIR_TEMP, 2);
 
-        const status: UnitStatus = {
+        return {
           active: general.data[0] === 1,
           mode2Speed: ventilation.data[4],           // reg 1104 — Mode 2 intake intensity
           supplyFanSpeed: ventilation.data[15],      // reg 1115
@@ -114,17 +115,16 @@ export class ModbusClient {
           supplyAirTemp: temps.data[0] / 10,         // reg 1200, value is 10x
           setpointTemp: temps.data[1] / 10,          // reg 1201, value is 10x
         };
-
-        this.cachedStatus = status;
-        this.cachedStatusTime = Date.now();
-        return status;
       } catch (error) {
         this.connected = false;
         this.closeExistingConnection();
+        this.invalidateCache();
         this.log.error('Failed to read status:', error);
         throw error;
       }
     });
+
+    return this.statusPromise;
   }
 
   async setPower(on: boolean): Promise<void> {

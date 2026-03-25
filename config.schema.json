@@ -40,8 +40,8 @@
               "title": "Device ID",
               "type": "string",
               "required": true,
-              "pattern": "^[A-Za-z0-9]{16}$",
-              "description": "Unique 16-character alphanumeric ID for HomeKit UUID generation"
+              "pattern": "^[A-Za-z0-9_]{16}$",
+              "description": "Unique 16-character ID (letters, digits, underscore) for HomeKit UUID generation"
             }
           }
         }
