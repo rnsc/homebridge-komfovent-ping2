@@ -1,8 +1,8 @@
 import type { CharacteristicValue, PlatformAccessory, Service } from 'homebridge';
-import type { KomfoventPing2Platform } from './platform.js';
-import type { Device } from './types.js';
+import type { KomfoventPing2Platform } from './platform';
+import type { Device } from './types';
 
-import { ModbusClient } from './client.js';
+import { ModbusClient } from './client';
 
 const POLL_INTERVAL_MS = 30_000;
 
@@ -11,6 +11,7 @@ export class KomfoventPing2Accessory {
   private readonly temperatureService: Service;
   private readonly client: ModbusClient;
   private readonly device: Device;
+  private readonly pollInterval: ReturnType<typeof setInterval>;
 
   constructor(
     private readonly platform: KomfoventPing2Platform,
@@ -56,7 +57,12 @@ export class KomfoventPing2Accessory {
       .onGet(this.getSupplyAirTemperature.bind(this));
 
     // Poll periodically to push state updates
-    setInterval(() => this.pollStatus(), POLL_INTERVAL_MS);
+    this.pollInterval = setInterval(() => this.pollStatus(), POLL_INTERVAL_MS);
+  }
+
+  shutdown(): void {
+    clearInterval(this.pollInterval);
+    this.client.disconnect();
   }
 
   // Maps ventilation level (1-3) to HomeKit RotationSpeed percentage

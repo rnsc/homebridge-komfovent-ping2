@@ -2,7 +2,6 @@
   "private": false,
   "displayName": "Komfovent Ping2",
   "name": "@rnsc/homebridge-komfovent-ping2",
-  "type": "module",
   "version": "0.3.0",
   "description": "Homebridge plugin to control a Komfovent unit through a PING2 module over Modbus TCP.",
   "license": "Apache-2.0",

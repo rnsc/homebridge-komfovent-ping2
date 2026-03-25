@@ -1,8 +1,8 @@
 import type { API } from 'homebridge';
 
-import { PLATFORM_NAME } from './settings.js';
-import { KomfoventPing2Platform } from './platform.js';
+import { PLATFORM_NAME } from './settings';
+import { KomfoventPing2Platform } from './platform';
 
-export default (api: API) => {
+export = (api: API) => {
   api.registerPlatform(PLATFORM_NAME, KomfoventPing2Platform);
 };

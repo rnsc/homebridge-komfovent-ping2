@@ -1,10 +1,7 @@
 import type { Logging } from 'homebridge';
-import type { Device } from './types.js';
+import type { Device } from './types';
 
-// modbus-serial is a CJS package — use default import with type workaround
-import ModbusSerialModule from 'modbus-serial';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ModbusRTU = ModbusSerialModule as any;
+import ModbusRTU from 'modbus-serial';
 
 // C4 controller Modbus holding register addresses
 export const C4_REGISTERS = {
@@ -39,15 +36,22 @@ export interface UnitStatus {
 }
 
 export class ModbusClient {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private client: any;
+  private client: ModbusRTU;
   private connected = false;
+  private operationQueue: Promise<unknown> = Promise.resolve();
 
   constructor(
     private readonly log: Logging,
     private readonly device: Device,
   ) {
     this.client = new ModbusRTU();
+  }
+
+  // Serializes all Modbus operations to prevent concurrent socket access
+  private serialize<T>(operation: () => Promise<T>): Promise<T> {
+    const result = this.operationQueue.then(operation, operation);
+    this.operationQueue = result.catch(() => { /* keep chain alive */ });
+    return result;
   }
 
   private async ensureConnection(): Promise<void> {
@@ -59,52 +63,56 @@ export class ModbusClient {
 
     try {
       this.client = new ModbusRTU();
-      await this.client.connectTCP(this.device.host, { port: this.device.port });
-      this.client.setID(this.device.slaveId);
+      await this.client.connectTCP(this.device.host, { port: this.device.port! });
+      this.client.setID(this.device.slaveId!);
       this.client.setTimeout(5000);
       this.connected = true;
-      this.log.info(`Connected to ${this.device.host}:${this.device.port} (slave ${this.device.slaveId})`);
+      this.log.info(`Connected to ${this.device.host}:${this.device.port!} (slave ${this.device.slaveId!})`);
     } catch (error) {
-      this.log.error(`Failed to connect to ${this.device.host}:${this.device.port}:`, error);
+      this.log.error(`Failed to connect to ${this.device.host}:${this.device.port!}:`, error);
       throw error;
     }
   }
 
   async getStatus(): Promise<UnitStatus> {
-    await this.ensureConnection();
+    return this.serialize(async () => {
+      await this.ensureConnection();
 
-    try {
-      const general = await this.client.readHoldingRegisters(C4_REGISTERS.START_STOP, 1);
-      const ventilation = await this.client.readHoldingRegisters(C4_REGISTERS.VENTILATION_LEVEL, 17);
-      const temps = await this.client.readHoldingRegisters(C4_REGISTERS.SUPPLY_AIR_TEMP, 2);
+      try {
+        const general = await this.client.readHoldingRegisters(C4_REGISTERS.START_STOP, 1);
+        const ventilation = await this.client.readHoldingRegisters(C4_REGISTERS.VENTILATION_LEVEL, 17);
+        const temps = await this.client.readHoldingRegisters(C4_REGISTERS.SUPPLY_AIR_TEMP, 2);
 
-      return {
-        active: general.data[0] === 1,
-        ventilationLevel: ventilation.data[1],   // reg 1101 — current level
-        mode: ventilation.data[2],                // reg 1102 — 0=Manual, 1=Auto
-        supplyFanSpeed: ventilation.data[15],     // reg 1115
-        exhaustFanSpeed: ventilation.data[16],    // reg 1116
-        supplyAirTemp: temps.data[0] / 10,        // reg 1200, value is 10x
-        setpointTemp: temps.data[1] / 10,         // reg 1201, value is 10x
-      };
-    } catch (error) {
-      this.connected = false;
-      this.log.error('Failed to read status:', error);
-      throw error;
-    }
+        return {
+          active: general.data[0] === 1,
+          ventilationLevel: ventilation.data[1],   // reg 1101 — current level
+          mode: ventilation.data[2],                // reg 1102 — 0=Manual, 1=Auto
+          supplyFanSpeed: ventilation.data[15],     // reg 1115
+          exhaustFanSpeed: ventilation.data[16],    // reg 1116
+          supplyAirTemp: temps.data[0] / 10,        // reg 1200, value is 10x
+          setpointTemp: temps.data[1] / 10,         // reg 1201, value is 10x
+        };
+      } catch (error) {
+        this.connected = false;
+        this.log.error('Failed to read status:', error);
+        throw error;
+      }
+    });
   }
 
   async setPower(on: boolean): Promise<void> {
-    await this.ensureConnection();
+    return this.serialize(async () => {
+      await this.ensureConnection();
 
-    try {
-      await this.client.writeRegister(C4_REGISTERS.START_STOP, on ? 1 : 0);
-      this.log.info(`Power set to ${on ? 'ON' : 'OFF'}`);
-    } catch (error) {
-      this.connected = false;
-      this.log.error('Failed to set power:', error);
-      throw error;
-    }
+      try {
+        await this.client.writeRegister(C4_REGISTERS.START_STOP, on ? 1 : 0);
+        this.log.info(`Power set to ${on ? 'ON' : 'OFF'}`);
+      } catch (error) {
+        this.connected = false;
+        this.log.error('Failed to set power:', error);
+        throw error;
+      }
+    });
   }
 
   async setVentilationLevel(level: number): Promise<void> {
@@ -113,19 +121,21 @@ export class ModbusClient {
       return;
     }
 
-    await this.ensureConnection();
+    return this.serialize(async () => {
+      await this.ensureConnection();
 
-    try {
-      await this.client.writeRegister(C4_REGISTERS.VENTILATION_LEVEL, level);
-      this.log.info(`Ventilation level set to ${level}`);
-    } catch (error) {
-      this.connected = false;
-      this.log.error('Failed to set ventilation level:', error);
-      throw error;
-    }
+      try {
+        await this.client.writeRegister(C4_REGISTERS.VENTILATION_LEVEL, level);
+        this.log.info(`Ventilation level set to ${level}`);
+      } catch (error) {
+        this.connected = false;
+        this.log.error('Failed to set ventilation level:', error);
+        throw error;
+      }
+    });
   }
 
-  async disconnect(): Promise<void> {
+  disconnect(): void {
     if (this.client.isOpen) {
       this.client.close(() => { /* noop */ });
       this.connected = false;

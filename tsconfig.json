@@ -3,16 +3,16 @@
     "target": "ES2022",
     "lib": ["DOM", "ES2022"],
     "rootDir": "src",
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
+    "module": "commonjs",
+    "moduleResolution": "node",
     "strict": true,
     "declaration": true,
     "outDir": "dist",
     "sourceMap": true,
-    "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
   },
-  "include": ["eslint.config.js", "src"],
+  "include": ["src"],
   "exclude": ["**/*.spec.ts"]
 }
