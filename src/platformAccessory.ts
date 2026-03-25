@@ -25,7 +25,7 @@ export class KomfoventPing2Accessory {
       .setCharacteristic(this.platform.Characteristic.Model, 'Domekt C4 / PING2')
       .setCharacteristic(this.platform.Characteristic.SerialNumber, this.device.deviceId);
 
-    // Fan service — On/Off + RotationSpeed mapped to ventilation level (1-3)
+    // Fan service — On/Off + RotationSpeed controlling Mode 2 intensity (5-95%, step 5)
     this.fanService = this.accessory.getService(this.platform.Service.Fan)
       || this.accessory.addService(this.platform.Service.Fan);
 
@@ -40,8 +40,8 @@ export class KomfoventPing2Accessory {
       .onGet(this.getRotationSpeed.bind(this))
       .setProps({
         minValue: 0,
-        maxValue: 99,
-        minStep: 33,
+        maxValue: 100,
+        minStep: 5,
       });
 
     // Temperature sensor service — supply air temperature (read-only)
@@ -65,29 +65,11 @@ export class KomfoventPing2Accessory {
     this.client.disconnect();
   }
 
-  // Maps ventilation level (1-3) to HomeKit RotationSpeed (0, 33, 66, 99)
-  private levelToPercent(level: number): number {
-    return level * 33;
-  }
-
-  // Maps HomeKit RotationSpeed (0, 33, 66, 99) to ventilation level (1-3)
-  private percentToLevel(percent: number): number {
-    if (percent <= 33) {
-      return 1;
-    } else if (percent <= 66) {
-      return 2;
-    }
-    return 3;
-  }
-
   private async pollStatus(): Promise<void> {
     try {
       const status = await this.client.getStatus();
       this.fanService.updateCharacteristic(this.platform.Characteristic.On, status.active);
-      this.fanService.updateCharacteristic(
-        this.platform.Characteristic.RotationSpeed,
-        this.levelToPercent(status.ventilationLevel),
-      );
+      this.fanService.updateCharacteristic(this.platform.Characteristic.RotationSpeed, status.mode2Speed);
       this.temperatureService.updateCharacteristic(
         this.platform.Characteristic.CurrentTemperature,
         status.supplyAirTemp,
@@ -100,10 +82,7 @@ export class KomfoventPing2Accessory {
   async getActive(): Promise<CharacteristicValue> {
     try {
       const status = await this.client.getStatus();
-      this.fanService.updateCharacteristic(
-        this.platform.Characteristic.RotationSpeed,
-        this.levelToPercent(status.ventilationLevel),
-      );
+      this.fanService.updateCharacteristic(this.platform.Characteristic.RotationSpeed, status.mode2Speed);
       return status.active;
     } catch {
       throw new this.platform.api.hap.HapStatusError(
@@ -125,7 +104,7 @@ export class KomfoventPing2Accessory {
   async getRotationSpeed(): Promise<CharacteristicValue> {
     try {
       const status = await this.client.getStatus();
-      return this.levelToPercent(status.ventilationLevel);
+      return status.mode2Speed;
     } catch {
       throw new this.platform.api.hap.HapStatusError(
         this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE,
@@ -134,9 +113,8 @@ export class KomfoventPing2Accessory {
   }
 
   async setRotationSpeed(value: CharacteristicValue): Promise<void> {
-    const level = this.percentToLevel(value as number);
     try {
-      await this.client.setVentilationLevel(level);
+      await this.client.setMode2Speed(value as number);
     } catch {
       throw new this.platform.api.hap.HapStatusError(
         this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE,

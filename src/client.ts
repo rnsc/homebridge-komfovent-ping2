@@ -27,10 +27,9 @@ export const C4_REGISTERS = {
 
 export interface UnitStatus {
   active: boolean;
+  mode2Speed: number;
   supplyFanSpeed: number;
   exhaustFanSpeed: number;
-  ventilationLevel: number;
-  mode: number;
   supplyAirTemp: number;
   setpointTemp: number;
 }
@@ -96,12 +95,11 @@ export class ModbusClient {
 
         return {
           active: general.data[0] === 1,
-          ventilationLevel: ventilation.data[1],   // reg 1101 — current level
-          mode: ventilation.data[2],                // reg 1102 — 0=Manual, 1=Auto
-          supplyFanSpeed: ventilation.data[15],     // reg 1115
-          exhaustFanSpeed: ventilation.data[16],    // reg 1116
-          supplyAirTemp: temps.data[0] / 10,        // reg 1200, value is 10x
-          setpointTemp: temps.data[1] / 10,         // reg 1201, value is 10x
+          mode2Speed: ventilation.data[4],           // reg 1104 — Mode 2 intake intensity
+          supplyFanSpeed: ventilation.data[15],      // reg 1115
+          exhaustFanSpeed: ventilation.data[16],     // reg 1116
+          supplyAirTemp: temps.data[0] / 10,         // reg 1200, value is 10x
+          setpointTemp: temps.data[1] / 10,          // reg 1201, value is 10x
         };
       } catch (error) {
         this.connected = false;
@@ -128,22 +126,21 @@ export class ModbusClient {
     });
   }
 
-  async setVentilationLevel(level: number): Promise<void> {
-    if (level < 1 || level > 3) {
-      this.log.warn(`Invalid ventilation level ${level}, must be 1-3`);
-      return;
-    }
+  async setMode2Speed(speed: number): Promise<void> {
+    speed = Math.round(speed / 5) * 5;
+    speed = Math.min(95, Math.max(5, speed));
 
     return this.serialize(async () => {
       await this.ensureConnection();
 
       try {
-        await this.client.writeRegister(C4_REGISTERS.VENTILATION_LEVEL, level);
-        this.log.info(`Ventilation level set to ${level}`);
+        await this.client.writeRegister(C4_REGISTERS.INTAKE_LEVEL_2, speed);
+        await this.client.writeRegister(C4_REGISTERS.EXHAUST_LEVEL_2, speed);
+        this.log.info(`Mode 2 speed set to ${speed}% (intake + exhaust)`);
       } catch (error) {
         this.connected = false;
         this.closeExistingConnection();
-        this.log.error('Failed to set ventilation level:', error);
+        this.log.error('Failed to set Mode 2 speed:', error);
         throw error;
       }
     });
