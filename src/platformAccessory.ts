@@ -76,6 +76,12 @@ export class KomfoventPing2Accessory {
       );
     } catch {
       this.platform.log.debug('Poll failed, will retry next interval');
+      const hapError = new this.platform.api.hap.HapStatusError(
+        this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE,
+      );
+      this.fanService.updateCharacteristic(this.platform.Characteristic.On, hapError);
+      this.fanService.updateCharacteristic(this.platform.Characteristic.RotationSpeed, hapError);
+      this.temperatureService.updateCharacteristic(this.platform.Characteristic.CurrentTemperature, hapError);
     }
   }
 

@@ -15,7 +15,7 @@ Homebridge plugin that exposes a Komfovent Domekt ventilation unit (C4 controlle
 * A Komfovent Domekt unit with a **C4 controller** and **PING2 network module**
 * The PING2 module must be reachable over TCP on port 502 (Modbus TCP)
 * Homebridge >= 1.8.0
-* Node.js >= 20
+* Node.js >= 20.18
 
 ## Configuration
 
