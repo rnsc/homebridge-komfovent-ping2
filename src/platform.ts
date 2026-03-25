@@ -43,6 +43,11 @@ export class KomfoventPing2Platform implements DynamicPlatformPlugin {
     const discoveredUUIDs = new Set<string>();
 
     for (const device of devices) {
+      if (!device.name || !device.host || !device.deviceId) {
+        this.log.warn('Skipping device with missing required fields (name, host, deviceId):', JSON.stringify(device));
+        continue;
+      }
+
       device.port = device.port ?? 502;
       device.slaveId = device.slaveId ?? 1;
 
