@@ -1,59 +1,134 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import {KomfoventPing2Platform} from './platform';
-import axios from 'axios';
-import { PlatformConfig } from 'homebridge';
-import { Device } from './types';
+import type { Logging } from 'homebridge';
+import type { Device } from './types.js';
 
-export class Ping2JsonClient {
+// modbus-serial is a CJS package — use default import with type workaround
+import ModbusSerialModule from 'modbus-serial';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const ModbusRTU = ModbusSerialModule as any;
 
-  constructor(private readonly platform: KomfoventPing2Platform,
-              private readonly device: Device,
-              private readonly config: PlatformConfig) {
+// C4 controller Modbus holding register addresses
+export const C4_REGISTERS = {
+  START_STOP: 1000,
+  SEASON: 1001,
+  VENTILATION_LEVEL: 1100,
+  VENTILATION_LEVEL_CURRENT: 1101,
+  MODE: 1102,
+  INTAKE_LEVEL_1: 1103,
+  INTAKE_LEVEL_2: 1104,
+  INTAKE_LEVEL_3: 1105,
+  INTAKE_LEVEL_4: 1106,
+  EXHAUST_LEVEL_1: 1107,
+  EXHAUST_LEVEL_2: 1108,
+  EXHAUST_LEVEL_3: 1109,
+  EXHAUST_LEVEL_4: 1110,
+  FAN_STATUS: 1114,
+  SUPPLY_FAN_SPEED: 1115,
+  EXHAUST_FAN_SPEED: 1116,
+  SUPPLY_AIR_TEMP: 1200,
+  SETPOINT_TEMP: 1201,
+} as const;
+
+export interface UnitStatus {
+  active: boolean;
+  supplyFanSpeed: number;
+  exhaustFanSpeed: number;
+  ventilationLevel: number;
+  mode: number;
+  supplyAirTemp: number;
+  setpointTemp: number;
+}
+
+export class ModbusClient {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private client: any;
+  private connected = false;
+
+  constructor(
+    private readonly log: Logging,
+    private readonly device: Device,
+  ) {
+    this.client = new ModbusRTU();
   }
 
-  async getStatus(): Promise<{ active: string ; speed: number }> {
-    this.platform.log.info('Get status');
-    return axios.get(this.device.url, {
-      headers:{
-        'Accept': 'application/json',
-      },
-    }).then((response)=>{
-      this.platform.log.info(`Reply from Python JSON API: ${JSON.stringify(response.data)}`);
-      return response.data;
-    })
-      .catch((error) => {
-        this.platform.log.error('Error with getRequest:', error);
-        return Promise.resolve();
-      });
+  private async ensureConnection(): Promise<void> {
+    if (this.connected && this.client.isOpen) {
+      return;
+    }
+
+    this.connected = false;
+
+    try {
+      this.client = new ModbusRTU();
+      await this.client.connectTCP(this.device.host, { port: this.device.port });
+      this.client.setID(this.device.slaveId);
+      this.client.setTimeout(5000);
+      this.connected = true;
+      this.log.info(`Connected to ${this.device.host}:${this.device.port} (slave ${this.device.slaveId})`);
+    } catch (error) {
+      this.log.error(`Failed to connect to ${this.device.host}:${this.device.port}:`, error);
+      throw error;
+    }
   }
 
-  async setPower(value: string) {
-    this.platform.log.info('Turn on/off ->', value.toString());
-    return this.putRequest(this.device.deviceId, { 'active': value }, 'setPower', 'Error updating power:');
+  async getStatus(): Promise<UnitStatus> {
+    await this.ensureConnection();
+
+    try {
+      const general = await this.client.readHoldingRegisters(C4_REGISTERS.START_STOP, 1);
+      const ventilation = await this.client.readHoldingRegisters(C4_REGISTERS.VENTILATION_LEVEL, 17);
+      const temps = await this.client.readHoldingRegisters(C4_REGISTERS.SUPPLY_AIR_TEMP, 2);
+
+      return {
+        active: general.data[0] === 1,
+        ventilationLevel: ventilation.data[1],   // reg 1101 — current level
+        mode: ventilation.data[2],                // reg 1102 — 0=Manual, 1=Auto
+        supplyFanSpeed: ventilation.data[15],     // reg 1115
+        exhaustFanSpeed: ventilation.data[16],    // reg 1116
+        supplyAirTemp: temps.data[0] / 10,        // reg 1200, value is 10x
+        setpointTemp: temps.data[1] / 10,         // reg 1201, value is 10x
+      };
+    } catch (error) {
+      this.connected = false;
+      this.log.error('Failed to read status:', error);
+      throw error;
+    }
   }
 
-  async setSpeed(value: number) {
-    this.platform.log.info('Change speed ->', value);
-    return this.putRequest(this.device.deviceId, { 'speed': value }, 'setSpeed', 'Error updating speed:');
+  async setPower(on: boolean): Promise<void> {
+    await this.ensureConnection();
+
+    try {
+      await this.client.writeRegister(C4_REGISTERS.START_STOP, on ? 1 : 0);
+      this.log.info(`Power set to ${on ? 'ON' : 'OFF'}`);
+    } catch (error) {
+      this.connected = false;
+      this.log.error('Failed to set power:', error);
+      throw error;
+    }
   }
 
-  private putRequest(deviceId: string, requestData: any, caller: string, errorHeader: string): Promise<boolean>{
-    this.platform.log.info(`${caller}-> requestData: ${JSON.stringify(requestData)}`);
-    return axios.put(this.device.url,
-      requestData, {
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-      })
-      .then(res => {
-        this.platform.log.info(`${caller}-> device: ${deviceId}; response:${JSON.stringify(res.data)}`);
-        return true;
-      })
-      .catch((error) => {
-        this.platform.log.error(errorHeader, error);
-        return false;
-      },
-      );
+  async setVentilationLevel(level: number): Promise<void> {
+    if (level < 1 || level > 3) {
+      this.log.warn(`Invalid ventilation level ${level}, must be 1-3`);
+      return;
+    }
+
+    await this.ensureConnection();
+
+    try {
+      await this.client.writeRegister(C4_REGISTERS.VENTILATION_LEVEL, level);
+      this.log.info(`Ventilation level set to ${level}`);
+    } catch (error) {
+      this.connected = false;
+      this.log.error('Failed to set ventilation level:', error);
+      throw error;
+    }
+  }
+
+  async disconnect(): Promise<void> {
+    if (this.client.isOpen) {
+      this.client.close(() => { /* noop */ });
+      this.connected = false;
+    }
   }
 }

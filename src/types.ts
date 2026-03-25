@@ -1,6 +1,7 @@
-
 export type Device = {
   name: string;
-  url: string;
+  host: string;
+  port: number;
+  slaveId: number;
   deviceId: string;
 };
