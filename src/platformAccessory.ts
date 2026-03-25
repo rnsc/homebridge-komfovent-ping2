@@ -39,8 +39,8 @@ export class KomfoventPing2Accessory {
       .onSet(this.setRotationSpeed.bind(this))
       .onGet(this.getRotationSpeed.bind(this))
       .setProps({
-        minValue: 0,
-        maxValue: 100,
+        minValue: 5,
+        maxValue: 95,
         minStep: 5,
       });
 
