@@ -19,6 +19,18 @@ jobs:
         with:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
+
       - run: npm ci
-      - run: npm run build --if-present
-      - run: npm publish
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+      - name: Publish to npm
+        run: |
+          if [[ "${{ github.ref_name }}" == *"beta"* ]]; then
+            npm publish --tag beta
+          else
+            npm publish
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
