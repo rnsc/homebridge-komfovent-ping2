@@ -1,6 +1,13 @@
 # Ignore source code
 src
 
+# Claude Code
+.claude/
+CLAUDE.md
+
+# macOS
+.DS_Store
+
 # ------------- Defaults ------------- #
 
 # gitHub actions
@@ -8,6 +15,7 @@ src
 
 # eslint
 .eslintrc
+eslint.config.mjs
 
 # typescript
 tsconfig.json
