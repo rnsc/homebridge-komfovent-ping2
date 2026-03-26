@@ -196,5 +196,6 @@ export class ModbusClient {
   disconnect(): void {
     this.connected = false;
     this.closeExistingConnection();
+    this.invalidateCache();
   }
 }
