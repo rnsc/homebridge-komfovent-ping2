@@ -6,9 +6,10 @@ Homebridge plugin that exposes a Komfovent Domekt ventilation unit (C4 controlle
 
 ## Features
 
-* **ON/OFF** — start/stop the ventilation unit
-* **Fan speed** — set Mode 2 intake and exhaust intensity from 5% to 95% in 5% increments
-* **Supply air temperature** — exposed as a TemperatureSensor accessory in HomeKit
+* **ON/OFF** — start/stop the ventilation unit (register 1000)
+* **Fan speed** — adjusts Mode 2 intake and exhaust fan intensity from 5% to 95% in 5% increments (registers 1104/1108). This modifies the default speed values for Mode 2 on the PING2 module — it does not switch between ventilation modes
+* **Supply air temperature** — exposed as a read-only TemperatureSensor accessory in HomeKit (register 1200)
+* **Clock sync** — syncs the PING2 clock from the Homebridge server on startup and every 24 hours, with optional timezone override for Docker deployments
 
 ## Requirements
 
