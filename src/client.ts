@@ -40,6 +40,8 @@ export interface UnitStatus {
   setpointTemp: number;
 }
 
+type NormalizedDevice = Device & Required<Pick<Device, 'port' | 'slaveId'>>;
+
 export class ModbusClient {
   private client: ModbusRTU;
   private connected = false;
@@ -47,11 +49,13 @@ export class ModbusClient {
   private statusPromise: Promise<UnitStatus> | null = null;
   private statusPromiseTime = 0;
   private static readonly STATUS_CACHE_TTL_MS = 2000;
+  private readonly device: NormalizedDevice;
 
   constructor(
     private readonly log: Logging,
-    private readonly device: Device,
+    device: Device,
   ) {
+    this.device = { ...device, port: device.port ?? 502, slaveId: device.slaveId ?? 1 };
     this.client = new ModbusRTU();
   }
 
@@ -87,13 +91,13 @@ export class ModbusClient {
 
     try {
       this.client = new ModbusRTU();
-      await this.client.connectTCP(this.device.host, { port: this.device.port! });
-      this.client.setID(this.device.slaveId!);
+      await this.client.connectTCP(this.device.host, { port: this.device.port });
+      this.client.setID(this.device.slaveId);
       this.client.setTimeout(10000);
       this.connected = true;
-      this.log.info(`Connected to ${this.device.host}:${this.device.port!} (slave ${this.device.slaveId!})`);
+      this.log.info(`Connected to ${this.device.host}:${this.device.port} (slave ${this.device.slaveId})`);
     } catch (error) {
-      this.log.error(`Failed to connect to ${this.device.host}:${this.device.port!}:`, error);
+      this.log.error(`Failed to connect to ${this.device.host}:${this.device.port}:`, error);
       throw error;
     }
   }
