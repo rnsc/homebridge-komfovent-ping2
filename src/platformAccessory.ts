@@ -38,13 +38,13 @@ export class KomfoventPing2Accessory {
       .onGet(this.getActive.bind(this));
 
     this.fanService.getCharacteristic(this.platform.Characteristic.RotationSpeed)
-      .onSet(this.setRotationSpeed.bind(this))
-      .onGet(this.getRotationSpeed.bind(this))
       .setProps({
         minValue: 5,
         maxValue: 95,
         minStep: 5,
-      });
+      })
+      .onSet(this.setRotationSpeed.bind(this))
+      .onGet(this.getRotationSpeed.bind(this));
 
     // Temperature sensor service — supply air temperature (read-only)
     this.temperatureService = this.accessory.getService(this.platform.Service.TemperatureSensor)

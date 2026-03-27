@@ -87,7 +87,7 @@ export class ModbusClient {
       this.client = new ModbusRTU();
       await this.client.connectTCP(this.device.host, { port: this.device.port! });
       this.client.setID(this.device.slaveId!);
-      this.client.setTimeout(5000);
+      this.client.setTimeout(10000);
       this.connected = true;
       this.log.info(`Connected to ${this.device.host}:${this.device.port!} (slave ${this.device.slaveId!})`);
     } catch (error) {

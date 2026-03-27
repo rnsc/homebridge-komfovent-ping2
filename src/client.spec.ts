@@ -332,7 +332,7 @@ describe('ModbusClient', () => {
 
       expect(mockModbusClient.connectTCP).toHaveBeenCalledWith('192.168.88.5', { port: 502 });
       expect(mockModbusClient.setID).toHaveBeenCalledWith(20);
-      expect(mockModbusClient.setTimeout).toHaveBeenCalledWith(5000);
+      expect(mockModbusClient.setTimeout).toHaveBeenCalledWith(10000);
     });
 
     it('throws and logs on connection failure', async () => {
