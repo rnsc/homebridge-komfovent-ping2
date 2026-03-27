@@ -42,6 +42,11 @@
               "required": true,
               "pattern": "^[A-Za-z0-9_]{16}$",
               "description": "Unique 16-character ID (letters, digits, underscore) for HomeKit UUID generation"
+            },
+            "timezone": {
+              "title": "Timezone",
+              "type": "string",
+              "description": "IANA timezone for clock sync (e.g. Europe/Luxembourg). Uses system timezone if not set."
             }
           }
         }

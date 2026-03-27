@@ -319,6 +319,21 @@ describe('ModbusClient', () => {
 
       vi.useRealTimers();
     });
+
+    it('uses configured timezone for clock sync', async () => {
+      const tzClient = new ModbusClient(log, createDevice({ timezone: 'Asia/Tokyo' }));
+
+      vi.useFakeTimers();
+      // Set system time to 2026-03-25 10:00 UTC — Tokyo is UTC+9 = 19:00
+      vi.setSystemTime(new Date('2026-03-25T10:00:00Z'));
+
+      await tzClient.syncClock();
+
+      // Tokyo time: 19:00 = (19 << 8) | 0
+      expect(mockModbusClient.writeRegister).toHaveBeenCalledWith(C4_REGISTERS.TIME, (19 << 8) | 0);
+
+      vi.useRealTimers();
+    });
   });
 
   describe('connection management', () => {

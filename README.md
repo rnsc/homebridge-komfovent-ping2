@@ -45,6 +45,7 @@ Add the platform to your Homebridge `config.json`:
 | `deviceId` | Yes | — | 16-character ID (A-Z, a-z, 0-9, _) for HomeKit UUID generation |
 | `port` | No | `502` | Modbus TCP port |
 | `slaveId` | No | `1` | Modbus slave ID (1-254) |
+| `timezone` | No | system | IANA timezone for clock sync (e.g. `Europe/Luxembourg`) |
 
 ### Verifying Modbus connectivity
 

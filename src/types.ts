@@ -4,4 +4,5 @@ export type Device = {
   port?: number;
   slaveId?: number;
   deviceId: string;
+  timezone?: string;
 };

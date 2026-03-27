@@ -184,16 +184,39 @@ export class ModbusClient {
       try {
         await this.ensureConnection();
         const now = new Date();
-        const time = (now.getHours() << 8) | now.getMinutes();
-        const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay();
-        const monthDay = ((now.getMonth() + 1) << 8) | now.getDate();
-        const year = now.getFullYear();
+        const tz = this.device.timezone;
+
+        // If timezone is configured, convert to that timezone; otherwise use system local time
+        const hours = tz
+          ? parseInt(now.toLocaleString('en-US', { timeZone: tz, hour: '2-digit', hour12: false }))
+          : now.getHours();
+        const minutes = tz
+          ? parseInt(now.toLocaleString('en-US', { timeZone: tz, minute: '2-digit' }))
+          : now.getMinutes();
+        const day = tz
+          ? new Date(now.toLocaleString('en-US', { timeZone: tz })).getDay()
+          : now.getDay();
+        const month = tz
+          ? parseInt(now.toLocaleString('en-US', { timeZone: tz, month: 'numeric' }))
+          : now.getMonth() + 1;
+        const date = tz
+          ? parseInt(now.toLocaleString('en-US', { timeZone: tz, day: 'numeric' }))
+          : now.getDate();
+        const year = tz
+          ? parseInt(now.toLocaleString('en-US', { timeZone: tz, year: 'numeric' }))
+          : now.getFullYear();
+
+        const time = (hours << 8) | minutes;
+        const dayOfWeek = day === 0 ? 7 : day;
+        const monthDay = (month << 8) | date;
 
         await this.client.writeRegister(C4_REGISTERS.TIME, time);
         await this.client.writeRegister(C4_REGISTERS.DAY_OF_WEEK, dayOfWeek);
         await this.client.writeRegister(C4_REGISTERS.MONTH_DAY, monthDay);
         await this.client.writeRegister(C4_REGISTERS.YEAR, year);
-        this.log.info(`Clock synced to ${now.toLocaleString()}`);
+        const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
+        this.log.info(`Clock synced to ${dateStr} ${timeStr}${tz ? ` (${tz})` : ''}`);
       } catch (error) {
         this.connected = false;
         this.closeExistingConnection();
