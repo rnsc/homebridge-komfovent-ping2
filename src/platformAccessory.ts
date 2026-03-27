@@ -6,6 +6,7 @@ import { ModbusClient } from './client';
 
 const POLL_INTERVAL_MS = 30_000;
 const CLOCK_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const SPEED_DEBOUNCE_MS = 500;
 
 export class KomfoventPing2Accessory {
   private readonly fanService: Service;
@@ -14,6 +15,7 @@ export class KomfoventPing2Accessory {
   private readonly device: Device;
   private readonly pollInterval: ReturnType<typeof setInterval>;
   private readonly clockSyncInterval: ReturnType<typeof setInterval>;
+  private speedDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private readonly platform: KomfoventPing2Platform,
@@ -39,8 +41,8 @@ export class KomfoventPing2Accessory {
 
     this.fanService.getCharacteristic(this.platform.Characteristic.RotationSpeed)
       .setProps({
-        minValue: 5,
-        maxValue: 95,
+        minValue: 0,
+        maxValue: 100,
         minStep: 5,
       })
       .onSet(this.setRotationSpeed.bind(this))
@@ -134,13 +136,22 @@ export class KomfoventPing2Accessory {
   }
 
   async setRotationSpeed(value: CharacteristicValue): Promise<void> {
-    try {
-      await this.client.setMode2Speed(value as number);
-    } catch {
-      throw new this.platform.api.hap.HapStatusError(
-        this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE,
-      );
+    if (this.speedDebounceTimer) {
+      clearTimeout(this.speedDebounceTimer);
     }
+
+    return new Promise((resolve, reject) => {
+      this.speedDebounceTimer = setTimeout(async () => {
+        try {
+          await this.client.setMode2Speed(value as number);
+          resolve();
+        } catch {
+          reject(new this.platform.api.hap.HapStatusError(
+            this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE,
+          ));
+        }
+      }, SPEED_DEBOUNCE_MS);
+    });
   }
 
   async getSupplyAirTemperature(): Promise<CharacteristicValue> {
