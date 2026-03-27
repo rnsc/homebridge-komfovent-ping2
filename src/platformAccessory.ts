@@ -71,6 +71,9 @@ export class KomfoventPing2Accessory {
   shutdown(): void {
     clearInterval(this.pollInterval);
     clearInterval(this.clockSyncInterval);
+    if (this.speedDebounceTimer) {
+      clearTimeout(this.speedDebounceTimer);
+    }
     this.client.disconnect();
   }
 
