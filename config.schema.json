@@ -16,16 +16,37 @@
               "type": "string",
               "required": true
             },
-            "url": {
-              "title": "URL",
+            "host": {
+              "title": "Host",
               "type": "string",
-              "required": true
+              "required": true,
+              "description": "IP address or hostname of the PING2 module"
+            },
+            "port": {
+              "title": "Modbus TCP Port",
+              "type": "integer",
+              "default": 502,
+              "description": "Modbus TCP port (default: 502)"
+            },
+            "slaveId": {
+              "title": "Modbus Slave ID",
+              "type": "integer",
+              "default": 1,
+              "minimum": 1,
+              "maximum": 254,
+              "description": "Modbus slave ID (default: 1)"
             },
             "deviceId": {
               "title": "Device ID",
               "type": "string",
               "required": true,
-              "pattern": "^[\\w\\d]{16}$"
+              "pattern": "^[A-Za-z0-9_]{16}$",
+              "description": "Unique 16-character ID (letters, digits, underscore) for HomeKit UUID generation"
+            },
+            "timezone": {
+              "title": "Timezone",
+              "type": "string",
+              "description": "IANA timezone for clock sync (e.g. Europe/Luxembourg). Uses system timezone if not set."
             }
           }
         }
