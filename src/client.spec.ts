@@ -4,40 +4,40 @@ import type { Logging } from 'homebridge';
 import type { Device } from './types';
 
 // Real register data captured from a PING2 module at 192.168.88.5, slave ID 20
-// Captured 2026-03-25 ~18:22 CET
+// modbus-serial uses 0-based addresses; doc register numbers shown for reference
 const REAL_GENERAL_REGISTERS = {
-  // readHoldingRegisters(1000, 1)
-  data: [1],  // [1000]=1 (running)
+  // readHoldingRegisters(999, 1) → doc register 1000
+  data: [1],  // start/stop = 1 (running)
 };
 
 const REAL_VENTILATION_REGISTERS = {
-  // readHoldingRegisters(1100, 17)
+  // readHoldingRegisters(1099, 17) → doc registers 1100-1116
   data: [
-    2,   // [1100] ventilation level (manual) = 2
-    2,   // [1101] ventilation level (current) = 2
-    0,   // [1102] mode = 0 (manual)
-    20,  // [1103] intake level 1 = 20%
-    50,  // [1104] intake level 2 = 50%  <-- Mode 2 intake (what we read)
-    60,  // [1105] intake level 3 = 60%
-    20,  // [1106] intake level 4 = 20%
-    20,  // [1107] exhaust level 1 = 20%
-    50,  // [1108] exhaust level 2 = 50%  <-- Mode 2 exhaust (what we write)
-    60,  // [1109] exhaust level 3 = 60%
-    20,  // [1110] exhaust level 4 = 20%
-    0,   // [1111] OVR enable = 0
-    30,  // [1112] OVR time = 30 min
-    0,   // [1113] OVR time current = 0
-    1,   // [1114] fan status = 1 (operating)
-    50,  // [1115] supply fan speed = 50%
-    50,  // [1116] exhaust fan speed = 50%
+    2,   // doc 1100: ventilation level (manual) = 2
+    2,   // doc 1101: ventilation level (current) = 2
+    0,   // doc 1102: mode = 0 (manual)
+    20,  // doc 1103: intake level 1 = 20%
+    50,  // doc 1104: intake level 2 = 50%  <-- Mode 2 intake (what we read)
+    60,  // doc 1105: intake level 3 = 60%
+    20,  // doc 1106: intake level 4 = 20%
+    20,  // doc 1107: exhaust level 1 = 20%
+    50,  // doc 1108: exhaust level 2 = 50%  <-- Mode 2 exhaust (what we write)
+    60,  // doc 1109: exhaust level 3 = 60%
+    20,  // doc 1110: exhaust level 4 = 20%
+    0,   // doc 1111: OVR enable = 0
+    30,  // doc 1112: OVR time = 30 min
+    0,   // doc 1113: OVR time current = 0
+    1,   // doc 1114: fan status = 1 (operating)
+    50,  // doc 1115: supply fan speed = 50%
+    50,  // doc 1116: exhaust fan speed = 50%
   ],
 };
 
 const REAL_TEMP_REGISTERS = {
-  // readHoldingRegisters(1200, 2)
+  // readHoldingRegisters(1199, 2) → doc registers 1200-1201
   data: [
-    188,  // [1200] supply air temp = 18.8°C (value is 10x)
-    180,  // [1201] setpoint temp = 18.0°C (value is 10x)
+    188,  // doc 1200: supply air temp = 18.8°C (value is 10x)
+    180,  // doc 1201: setpoint temp = 18.0°C (value is 10x)
   ],
 };
 

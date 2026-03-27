@@ -4,29 +4,31 @@ import type { Device } from './types';
 import ModbusRTU from 'modbus-serial';
 
 // C4 controller Modbus holding register addresses
+// modbus-serial uses 0-based addresses; C4 docs use 1-based register references.
+// Subtract 1 from the documented register number to get the modbus-serial address.
 export const C4_REGISTERS = {
-  START_STOP: 1000,
-  SEASON: 1001,
-  VENTILATION_LEVEL: 1100,
-  VENTILATION_LEVEL_CURRENT: 1101,
-  MODE: 1102,
-  INTAKE_LEVEL_1: 1103,
-  INTAKE_LEVEL_2: 1104,
-  INTAKE_LEVEL_3: 1105,
-  INTAKE_LEVEL_4: 1106,
-  EXHAUST_LEVEL_1: 1107,
-  EXHAUST_LEVEL_2: 1108,
-  EXHAUST_LEVEL_3: 1109,
-  EXHAUST_LEVEL_4: 1110,
-  FAN_STATUS: 1114,
-  SUPPLY_FAN_SPEED: 1115,
-  EXHAUST_FAN_SPEED: 1116,
-  TIME: 1002,
-  DAY_OF_WEEK: 1003,
-  MONTH_DAY: 1004,
-  YEAR: 1005,
-  SUPPLY_AIR_TEMP: 1200,
-  SETPOINT_TEMP: 1201,
+  START_STOP: 999,       // doc: 1000
+  SEASON: 1000,          // doc: 1001
+  TIME: 1001,            // doc: 1002
+  DAY_OF_WEEK: 1002,     // doc: 1003
+  MONTH_DAY: 1003,       // doc: 1004
+  YEAR: 1004,            // doc: 1005
+  VENTILATION_LEVEL: 1099,          // doc: 1100
+  VENTILATION_LEVEL_CURRENT: 1100,  // doc: 1101
+  MODE: 1101,            // doc: 1102
+  INTAKE_LEVEL_1: 1102,  // doc: 1103
+  INTAKE_LEVEL_2: 1103,  // doc: 1104
+  INTAKE_LEVEL_3: 1104,  // doc: 1105
+  INTAKE_LEVEL_4: 1105,  // doc: 1106
+  EXHAUST_LEVEL_1: 1106, // doc: 1107
+  EXHAUST_LEVEL_2: 1107, // doc: 1108
+  EXHAUST_LEVEL_3: 1108, // doc: 1109
+  EXHAUST_LEVEL_4: 1109, // doc: 1110
+  FAN_STATUS: 1113,      // doc: 1114
+  SUPPLY_FAN_SPEED: 1114, // doc: 1115
+  EXHAUST_FAN_SPEED: 1115, // doc: 1116
+  SUPPLY_AIR_TEMP: 1199, // doc: 1200
+  SETPOINT_TEMP: 1200,   // doc: 1201
 } as const;
 
 export interface UnitStatus {
