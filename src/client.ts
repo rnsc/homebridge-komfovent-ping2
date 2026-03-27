@@ -186,25 +186,41 @@ export class ModbusClient {
         const now = new Date();
         const tz = this.device.timezone;
 
-        // If timezone is configured, convert to that timezone; otherwise use system local time
-        const hours = tz
-          ? parseInt(now.toLocaleString('en-US', { timeZone: tz, hour: '2-digit', hour12: false }))
-          : now.getHours();
-        const minutes = tz
-          ? parseInt(now.toLocaleString('en-US', { timeZone: tz, minute: '2-digit' }))
-          : now.getMinutes();
-        const day = tz
-          ? new Date(now.toLocaleString('en-US', { timeZone: tz })).getDay()
-          : now.getDay();
-        const month = tz
-          ? parseInt(now.toLocaleString('en-US', { timeZone: tz, month: 'numeric' }))
-          : now.getMonth() + 1;
-        const date = tz
-          ? parseInt(now.toLocaleString('en-US', { timeZone: tz, day: 'numeric' }))
-          : now.getDate();
-        const year = tz
-          ? parseInt(now.toLocaleString('en-US', { timeZone: tz, year: 'numeric' }))
-          : now.getFullYear();
+        let hours: number, minutes: number, day: number, month: number, date: number, year: number;
+
+        if (tz) {
+          const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: tz,
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          }).formatToParts(now);
+
+          const get = (type: string) => {
+            const part = parts.find(p => p.type === type);
+            if (!part) {
+              throw new Error(`Failed to extract ${type} for timezone "${tz}"`);
+            }
+            return parseInt(part.value, 10);
+          };
+
+          year = get('year');
+          month = get('month');
+          date = get('day');
+          hours = get('hour');
+          minutes = get('minute');
+          day = new Date(Date.UTC(year, month - 1, date)).getUTCDay();
+        } else {
+          hours = now.getHours();
+          minutes = now.getMinutes();
+          day = now.getDay();
+          month = now.getMonth() + 1;
+          date = now.getDate();
+          year = now.getFullYear();
+        }
 
         const time = (hours << 8) | minutes;
         const dayOfWeek = day === 0 ? 7 : day;
