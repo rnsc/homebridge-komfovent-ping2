@@ -140,18 +140,13 @@ export class KomfoventPing2Accessory {
       clearTimeout(this.speedDebounceTimer);
     }
 
-    return new Promise((resolve, reject) => {
-      this.speedDebounceTimer = setTimeout(async () => {
-        try {
-          await this.client.setMode2Speed(value as number);
-          resolve();
-        } catch {
-          reject(new this.platform.api.hap.HapStatusError(
-            this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE,
-          ));
-        }
-      }, SPEED_DEBOUNCE_MS);
-    });
+    this.speedDebounceTimer = setTimeout(async () => {
+      try {
+        await this.client.setMode2Speed(value as number);
+      } catch {
+        this.platform.log.debug('Debounced speed write failed');
+      }
+    }, SPEED_DEBOUNCE_MS);
   }
 
   async getSupplyAirTemperature(): Promise<CharacteristicValue> {
