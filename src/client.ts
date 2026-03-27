@@ -107,10 +107,15 @@ export class ModbusClient {
       try {
         await this.ensureConnection();
         const general = await this.client.readHoldingRegisters(C4_REGISTERS.START_STOP, 1);
-        const ventilation = await this.client.readHoldingRegisters(C4_REGISTERS.VENTILATION_LEVEL, 17);
-        const temps = await this.client.readHoldingRegisters(C4_REGISTERS.SUPPLY_AIR_TEMP, 2);
+        this.log.info(`Registers 1000: [${general.data.join(', ')}]`);
 
-        return {
+        const ventilation = await this.client.readHoldingRegisters(C4_REGISTERS.VENTILATION_LEVEL, 17);
+        this.log.info(`Registers 1100-1116: [${ventilation.data.join(', ')}]`);
+
+        const temps = await this.client.readHoldingRegisters(C4_REGISTERS.SUPPLY_AIR_TEMP, 2);
+        this.log.info(`Registers 1200-1201: [${temps.data.join(', ')}]`);
+
+        const status: UnitStatus = {
           active: general.data[0] === 1,
           mode2Speed: ventilation.data[4],           // reg 1104 — Mode 2 intake intensity
           supplyFanSpeed: ventilation.data[15],      // reg 1115
@@ -118,6 +123,10 @@ export class ModbusClient {
           supplyAirTemp: temps.data[0] / 10,         // reg 1200, value is 10x
           setpointTemp: temps.data[1] / 10,          // reg 1201, value is 10x
         };
+        this.log.info(`Status: active=${status.active}, mode2Speed=${status.mode2Speed}%,`
+          + ` supplyFan=${status.supplyFanSpeed}%, exhaustFan=${status.exhaustFanSpeed}%,`
+          + ` supplyAirTemp=${status.supplyAirTemp}°C, setpointTemp=${status.setpointTemp}°C`);
+        return status;
       } catch (error) {
         this.connected = false;
         this.closeExistingConnection();
