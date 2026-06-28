@@ -108,8 +108,6 @@ describe('ModbusClient', () => {
       expect(status).toEqual({
         active: true,
         mode2Speed: 50,
-        supplyFanSpeed: 50,
-        exhaustFanSpeed: 50,
         supplyAirTemp: 18.8,
         setpointTemp: 18.0,
       });
@@ -134,7 +132,7 @@ describe('ModbusClient', () => {
       await client.getStatus();
 
       expect(mockModbusClient.readHoldingRegisters).toHaveBeenCalledWith(C4_REGISTERS.START_STOP, 1);
-      expect(mockModbusClient.readHoldingRegisters).toHaveBeenCalledWith(C4_REGISTERS.VENTILATION_LEVEL, 17);
+      expect(mockModbusClient.readHoldingRegisters).toHaveBeenCalledWith(C4_REGISTERS.VENTILATION_LEVEL, 5);
       expect(mockModbusClient.readHoldingRegisters).toHaveBeenCalledWith(C4_REGISTERS.SUPPLY_AIR_TEMP, 2);
     });
 
@@ -163,7 +161,7 @@ describe('ModbusClient', () => {
       await client.getStatus();
 
       // Advance time past TTL
-      vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 3000);
+      vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 6000);
 
       const status2 = await client.getStatus();
       expect(status2.active).toBe(false);
@@ -355,6 +353,50 @@ describe('ModbusClient', () => {
 
       await expect(client.getStatus()).rejects.toThrow('ECONNREFUSED');
       expect(log.error).toHaveBeenCalled();
+    });
+
+    it('times out a hung connection attempt', async () => {
+      vi.useFakeTimers();
+      mockModbusClient.connectTCP.mockReset().mockReturnValue(new Promise(() => { /* never resolves */ }));
+
+      const promise = client.getStatus();
+      const assertion = expect(promise).rejects.toThrow(/Timed out/);
+      await vi.advanceTimersByTimeAsync(5000);
+      await assertion;
+
+      vi.useRealTimers();
+    });
+
+    it('backs off and fails fast after a connection failure', async () => {
+      mockModbusClient.connectTCP.mockReset().mockRejectedValue(new Error('ECONNREFUSED'));
+
+      await expect(client.getStatus()).rejects.toThrow('ECONNREFUSED');
+      expect(mockModbusClient.connectTCP).toHaveBeenCalledTimes(1);
+
+      // Immediate retry is short-circuited by the cooldown — no second socket attempt
+      await expect(client.getStatus()).rejects.toThrow(/cooling down/);
+      expect(mockModbusClient.connectTCP).toHaveBeenCalledTimes(1);
+    });
+
+    it('resets backoff after a successful reconnect', async () => {
+      mockModbusClient.connectTCP.mockReset()
+        .mockRejectedValueOnce(new Error('ECONNREFUSED'))
+        .mockResolvedValue(undefined);
+
+      await expect(client.getStatus()).rejects.toThrow('ECONNREFUSED');
+
+      // Move past the cooldown window, then a fresh read should succeed
+      vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 3000);
+      mockModbusClient.readHoldingRegisters
+        .mockResolvedValueOnce(REAL_GENERAL_REGISTERS)
+        .mockResolvedValueOnce(REAL_VENTILATION_REGISTERS)
+        .mockResolvedValueOnce(REAL_TEMP_REGISTERS);
+
+      const status = await client.getStatus();
+      expect(status.active).toBe(true);
+      expect(mockModbusClient.connectTCP).toHaveBeenCalledTimes(2);
+
+      vi.restoreAllMocks();
     });
   });
 

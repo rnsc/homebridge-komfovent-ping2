@@ -107,6 +107,20 @@ describe('KomfoventPing2Platform', () => {
       expect(api.registerPlatformAccessories).toHaveBeenCalledTimes(1);
     });
 
+    it('skips devices with a malformed deviceId', () => {
+      const config = createConfig([
+        { name: 'Too Short', host: '192.168.88.5', deviceId: 'abc123' },
+        { name: 'Bad Chars', host: '192.168.88.5', deviceId: 'has spaces 1234!' },
+        { name: 'Valid', host: '192.168.88.5', deviceId: 'abcdef1234567890' },
+      ]);
+
+      new KomfoventPing2Platform(log, config, api);
+      api._handlers['didFinishLaunching']();
+
+      expect(log.warn).toHaveBeenCalledTimes(2);
+      expect(api.registerPlatformAccessories).toHaveBeenCalledTimes(1);
+    });
+
     it('handles empty devices array', () => {
       const config = createConfig([]);
 
