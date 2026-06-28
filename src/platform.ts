@@ -48,6 +48,15 @@ export class KomfoventPing2Platform implements DynamicPlatformPlugin {
         continue;
       }
 
+      if (!/^[A-Za-z0-9_]{16}$/.test(device.deviceId)) {
+        this.log.warn(
+          `Skipping device "${device.name}" with invalid deviceId `
+          + '(must be exactly 16 characters: A-Z, a-z, 0-9, _):',
+          device.deviceId,
+        );
+        continue;
+      }
+
       device.port = device.port ?? 502;
       device.slaveId = device.slaveId ?? 1;
 
