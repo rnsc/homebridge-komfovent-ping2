@@ -121,6 +121,20 @@ describe('KomfoventPing2Platform', () => {
       expect(api.registerPlatformAccessories).toHaveBeenCalledTimes(1);
     });
 
+    it('skips devices with a duplicate deviceId', () => {
+      const config = createConfig([
+        { name: 'First', host: '192.168.88.5', deviceId: 'abcdef1234567890' },
+        { name: 'Second', host: '192.168.88.6', deviceId: 'abcdef1234567890' },
+      ]);
+
+      new KomfoventPing2Platform(log, config, api);
+      api._handlers['didFinishLaunching']();
+
+      expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('duplicate deviceId'));
+      expect(api.registerPlatformAccessories).toHaveBeenCalledTimes(1);
+      expect(MockedAccessory).toHaveBeenCalledTimes(1);
+    });
+
     it('handles empty devices array', () => {
       const config = createConfig([]);
 

@@ -92,6 +92,9 @@ export class ModbusClient {
     const timeout = new Promise<never>((_, reject) => {
       timer = setTimeout(() => reject(new Error(`Timed out after ${ms}ms: ${label}`)), ms);
     });
+    // If `promise` later rejects after the timeout has already won the race, nothing else
+    // observes it — swallow that rejection here to avoid an unhandled promise rejection.
+    promise.catch(() => { /* already handled via the race below */ });
     return Promise.race([promise, timeout]).finally(() => clearTimeout(timer)) as Promise<T>;
   }
 

@@ -41,6 +41,7 @@ export class KomfoventPing2Platform implements DynamicPlatformPlugin {
   discoverDevices() {
     const devices: Device[] = this.config.devices ?? [];
     const discoveredUUIDs = new Set<string>();
+    const seenDeviceIds = new Set<string>();
 
     for (const device of devices) {
       if (!device.name || !device.host || !device.deviceId) {
@@ -56,6 +57,15 @@ export class KomfoventPing2Platform implements DynamicPlatformPlugin {
         );
         continue;
       }
+
+      if (seenDeviceIds.has(device.deviceId)) {
+        this.log.warn(
+          `Skipping device "${device.name}" with duplicate deviceId "${device.deviceId}" `
+          + '(each device must have a unique deviceId; the first matching device wins)',
+        );
+        continue;
+      }
+      seenDeviceIds.add(device.deviceId);
 
       device.port = device.port ?? 502;
       device.slaveId = device.slaveId ?? 1;
