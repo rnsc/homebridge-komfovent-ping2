@@ -170,15 +170,33 @@ export class ModbusClient {
       const general = await this.client.readHoldingRegisters(C4_REGISTERS.START_STOP, 1);
       this.log.debug(`Registers 1000: [${general.data.join(', ')}]`);
 
-      const ventilation = await this.client.readHoldingRegisters(C4_REGISTERS.VENTILATION_LEVEL, 5);
-      this.log.debug(`Registers 1100-1104: [${ventilation.data.join(', ')}]`);
+      const ventilation = await this.client.readHoldingRegisters(C4_REGISTERS.VENTILATION_LEVEL, 9);
+      this.log.debug(`Registers 1100-1108: [${ventilation.data.join(', ')}]`);
 
       const temps = await this.client.readHoldingRegisters(C4_REGISTERS.SUPPLY_AIR_TEMP, 2);
       this.log.debug(`Registers 1200-1201: [${temps.data.join(', ')}]`);
 
+      const intakeMode2 = ventilation.data[4];  // reg 1104 — Mode 2 intake intensity
+      const exhaustMode2 = ventilation.data[8]; // reg 1108 — Mode 2 exhaust intensity
+
+      // setMode2Speed() writes intake then exhaust as two separate registers; if the exhaust
+      // write was ever lost (e.g. a dropped connection mid-write), self-heal on the next read by
+      // re-applying the intake value, since it was written first and is the source of truth.
+      if (exhaustMode2 !== intakeMode2) {
+        this.log.warn(
+          `Mode 2 intake/exhaust mismatch detected (intake=${intakeMode2}%, exhaust=${exhaustMode2}%)`
+          + ' — re-applying intake value to exhaust',
+        );
+        try {
+          await this.client.writeRegister(C4_REGISTERS.EXHAUST_LEVEL_2, intakeMode2);
+        } catch (error) {
+          this.log.error('Failed to reconcile Mode 2 exhaust intensity:', error);
+        }
+      }
+
       const status: UnitStatus = {
         active: general.data[0] === 1,
-        mode2Speed: ventilation.data[4],   // reg 1104 — Mode 2 intake intensity
+        mode2Speed: intakeMode2,
         supplyAirTemp: temps.data[0] / 10, // reg 1200, value is 10x
         setpointTemp: temps.data[1] / 10,  // reg 1201, value is 10x
       };

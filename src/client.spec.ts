@@ -132,8 +132,53 @@ describe('ModbusClient', () => {
       await client.getStatus();
 
       expect(mockModbusClient.readHoldingRegisters).toHaveBeenCalledWith(C4_REGISTERS.START_STOP, 1);
-      expect(mockModbusClient.readHoldingRegisters).toHaveBeenCalledWith(C4_REGISTERS.VENTILATION_LEVEL, 5);
+      expect(mockModbusClient.readHoldingRegisters).toHaveBeenCalledWith(C4_REGISTERS.VENTILATION_LEVEL, 9);
       expect(mockModbusClient.readHoldingRegisters).toHaveBeenCalledWith(C4_REGISTERS.SUPPLY_AIR_TEMP, 2);
+    });
+
+    it('reconciles a Mode 2 intake/exhaust mismatch by re-applying the intake value', async () => {
+      const mismatched = {
+        // Same layout as REAL_VENTILATION_REGISTERS but exhaust level 2 (index 8, doc 1108)
+        // has drifted to 40 while intake level 2 (index 4, doc 1104) is still 50.
+        data: [2, 2, 0, 20, 50, 60, 20, 20, 40, 60, 20, 0, 30, 0, 1, 50, 50],
+      };
+      mockModbusClient.readHoldingRegisters
+        .mockResolvedValueOnce(REAL_GENERAL_REGISTERS)
+        .mockResolvedValueOnce(mismatched)
+        .mockResolvedValueOnce(REAL_TEMP_REGISTERS);
+
+      const status = await client.getStatus();
+
+      expect(status.mode2Speed).toBe(50);
+      expect(mockModbusClient.writeRegister).toHaveBeenCalledWith(C4_REGISTERS.EXHAUST_LEVEL_2, 50);
+      expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('Mode 2 intake/exhaust mismatch'));
+    });
+
+    it('does not write when intake and exhaust Mode 2 values already match', async () => {
+      mockModbusClient.readHoldingRegisters
+        .mockResolvedValueOnce(REAL_GENERAL_REGISTERS)
+        .mockResolvedValueOnce(REAL_VENTILATION_REGISTERS)
+        .mockResolvedValueOnce(REAL_TEMP_REGISTERS);
+
+      await client.getStatus();
+
+      expect(mockModbusClient.writeRegister).not.toHaveBeenCalled();
+    });
+
+    it('logs but does not fail the read when the reconciliation write itself fails', async () => {
+      const mismatched = {
+        data: [2, 2, 0, 20, 50, 60, 20, 20, 40, 60, 20, 0, 30, 0, 1, 50, 50],
+      };
+      mockModbusClient.readHoldingRegisters
+        .mockResolvedValueOnce(REAL_GENERAL_REGISTERS)
+        .mockResolvedValueOnce(mismatched)
+        .mockResolvedValueOnce(REAL_TEMP_REGISTERS);
+      mockModbusClient.writeRegister.mockRejectedValueOnce(new Error('write failed'));
+
+      const status = await client.getStatus();
+
+      expect(status.mode2Speed).toBe(50);
+      expect(log.error).toHaveBeenCalledWith('Failed to reconcile Mode 2 exhaust intensity:', expect.any(Error));
     });
 
     it('returns cached result within TTL', async () => {
