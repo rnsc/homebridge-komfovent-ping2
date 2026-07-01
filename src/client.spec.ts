@@ -11,25 +11,13 @@ const REAL_GENERAL_REGISTERS = {
 };
 
 const REAL_VENTILATION_REGISTERS = {
-  // readHoldingRegisters(1099, 17) → doc registers 1100-1116
+  // readHoldingRegisters(1103, 5) → doc registers 1104-1108
   data: [
-    2,   // doc 1100: ventilation level (manual) = 2
-    2,   // doc 1101: ventilation level (current) = 2
-    0,   // doc 1102: mode = 0 (manual)
-    20,  // doc 1103: intake level 1 = 20%
     50,  // doc 1104: intake level 2 = 50%  <-- Mode 2 intake (what we read)
     60,  // doc 1105: intake level 3 = 60%
     20,  // doc 1106: intake level 4 = 20%
     20,  // doc 1107: exhaust level 1 = 20%
     50,  // doc 1108: exhaust level 2 = 50%  <-- Mode 2 exhaust (what we write)
-    60,  // doc 1109: exhaust level 3 = 60%
-    20,  // doc 1110: exhaust level 4 = 20%
-    0,   // doc 1111: OVR enable = 0
-    30,  // doc 1112: OVR time = 30 min
-    0,   // doc 1113: OVR time current = 0
-    1,   // doc 1114: fan status = 1 (operating)
-    50,  // doc 1115: supply fan speed = 50%
-    50,  // doc 1116: exhaust fan speed = 50%
   ],
 };
 
@@ -132,15 +120,15 @@ describe('ModbusClient', () => {
       await client.getStatus();
 
       expect(mockModbusClient.readHoldingRegisters).toHaveBeenCalledWith(C4_REGISTERS.START_STOP, 1);
-      expect(mockModbusClient.readHoldingRegisters).toHaveBeenCalledWith(C4_REGISTERS.VENTILATION_LEVEL, 9);
+      expect(mockModbusClient.readHoldingRegisters).toHaveBeenCalledWith(C4_REGISTERS.INTAKE_LEVEL_2, 5);
       expect(mockModbusClient.readHoldingRegisters).toHaveBeenCalledWith(C4_REGISTERS.SUPPLY_AIR_TEMP, 2);
     });
 
     it('reconciles a Mode 2 intake/exhaust mismatch by re-applying the intake value', async () => {
       const mismatched = {
-        // Same layout as REAL_VENTILATION_REGISTERS but exhaust level 2 (index 8, doc 1108)
-        // has drifted to 40 while intake level 2 (index 4, doc 1104) is still 50.
-        data: [2, 2, 0, 20, 50, 60, 20, 20, 40, 60, 20, 0, 30, 0, 1, 50, 50],
+        // Same layout as REAL_VENTILATION_REGISTERS but exhaust level 2 (index 4, doc 1108)
+        // has drifted to 40 while intake level 2 (index 0, doc 1104) is still 50.
+        data: [50, 60, 20, 20, 40],
       };
       mockModbusClient.readHoldingRegisters
         .mockResolvedValueOnce(REAL_GENERAL_REGISTERS)
@@ -167,7 +155,7 @@ describe('ModbusClient', () => {
 
     it('logs but does not fail the read when the reconciliation write itself fails', async () => {
       const mismatched = {
-        data: [2, 2, 0, 20, 50, 60, 20, 20, 40, 60, 20, 0, 30, 0, 1, 50, 50],
+        data: [50, 60, 20, 20, 40],
       };
       mockModbusClient.readHoldingRegisters
         .mockResolvedValueOnce(REAL_GENERAL_REGISTERS)

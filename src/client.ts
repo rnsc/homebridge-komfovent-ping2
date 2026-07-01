@@ -170,14 +170,17 @@ export class ModbusClient {
       const general = await this.client.readHoldingRegisters(C4_REGISTERS.START_STOP, 1);
       this.log.debug(`Registers 1000: [${general.data.join(', ')}]`);
 
-      const ventilation = await this.client.readHoldingRegisters(C4_REGISTERS.VENTILATION_LEVEL, 9);
-      this.log.debug(`Registers 1100-1108: [${ventilation.data.join(', ')}]`);
+      // Intake level 2 (1104) through exhaust level 2 (1108) is the smallest contiguous block
+      // covering both Mode 2 registers; the levels in between aren't used, but a single 5-register
+      // read is no more expensive than the old intake-only read and avoids a second round-trip.
+      const ventilation = await this.client.readHoldingRegisters(C4_REGISTERS.INTAKE_LEVEL_2, 5);
+      this.log.debug(`Registers 1104-1108: [${ventilation.data.join(', ')}]`);
 
       const temps = await this.client.readHoldingRegisters(C4_REGISTERS.SUPPLY_AIR_TEMP, 2);
       this.log.debug(`Registers 1200-1201: [${temps.data.join(', ')}]`);
 
-      const intakeMode2 = ventilation.data[4];  // reg 1104 — Mode 2 intake intensity
-      const exhaustMode2 = ventilation.data[8]; // reg 1108 — Mode 2 exhaust intensity
+      const intakeMode2 = ventilation.data[0];  // reg 1104 — Mode 2 intake intensity
+      const exhaustMode2 = ventilation.data[4]; // reg 1108 — Mode 2 exhaust intensity
 
       // setMode2Speed() writes intake then exhaust as two separate registers; if the exhaust
       // write was ever lost (e.g. a dropped connection mid-write), self-heal on the next read by
