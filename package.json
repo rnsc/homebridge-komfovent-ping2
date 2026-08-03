@@ -2,7 +2,7 @@
   "private": false,
   "displayName": "Komfovent Ping2",
   "name": "@rnsc/homebridge-komfovent-ping2",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "description": "Homebridge plugin to control a Komfovent unit through a PING2 module over Modbus TCP.",
   "license": "Apache-2.0",
   "repository": {
@@ -34,7 +34,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.0",
     "@types/node": "^22.19.0",
-    "eslint": "^9.39.0",
+    "eslint": "^10.7.0",
     "homebridge": "^2.0.0-beta.55",
     "nodemon": "^3.1.11",
     "rimraf": "^6.1.0",
