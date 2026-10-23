@@ -172,6 +172,7 @@ describe('ModbusClient', () => {
 
     it('invalidates cache on read failure', async () => {
       mockModbusClient.readHoldingRegisters
+        .mockRejectedValueOnce(new Error('Modbus timeout'))
         .mockRejectedValueOnce(new Error('Modbus timeout'));
 
       await expect(client.getStatus()).rejects.toThrow('Modbus timeout');
@@ -185,6 +186,45 @@ describe('ModbusClient', () => {
 
       const status = await client.getStatus();
       expect(status.active).toBe(true);
+    });
+
+    it('retries once on a fresh connection when the first read fails', async () => {
+      mockModbusClient.readHoldingRegisters
+        .mockRejectedValueOnce(Object.assign(new Error('Timed out'), { errno: 'ETIMEDOUT' }))
+        .mockResolvedValueOnce(REAL_GENERAL_REGISTERS)
+        .mockResolvedValueOnce(REAL_VENTILATION_REGISTERS)
+        .mockResolvedValueOnce(REAL_TEMP_REGISTERS);
+
+      const status = await client.getStatus();
+
+      expect(status.active).toBe(true);
+      expect(log.error).not.toHaveBeenCalled();
+      expect(log.debug).toHaveBeenCalledWith(expect.stringContaining('Timed out'));
+      expect(mockModbusClient.connectTCP).toHaveBeenCalledTimes(2);
+      expect(mockModbusClient.close).toHaveBeenCalled();
+    });
+
+    it('logs error exactly once when both read attempts fail', async () => {
+      mockModbusClient.readHoldingRegisters
+        .mockRejectedValueOnce(new Error('Timed out'))
+        .mockRejectedValueOnce(new Error('Timed out again'));
+
+      await expect(client.getStatus()).rejects.toThrow('Timed out again');
+
+      expect(log.error).toHaveBeenCalledTimes(1);
+      expect(log.error).toHaveBeenCalledWith('Failed to read status: Timed out again');
+      expect(mockModbusClient.readHoldingRegisters).toHaveBeenCalledTimes(2);
+    });
+
+    it('propagates reconnect failure during retry without a further attempt', async () => {
+      mockModbusClient.readHoldingRegisters.mockRejectedValueOnce(new Error('Timed out'));
+      mockModbusClient.connectTCP
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error('ECONNREFUSED'));
+
+      await expect(client.getStatus()).rejects.toThrow('ECONNREFUSED');
+      expect(mockModbusClient.connectTCP).toHaveBeenCalledTimes(2);
+      expect(mockModbusClient.readHoldingRegisters).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -218,6 +258,18 @@ describe('ModbusClient', () => {
       expect(status.active).toBe(false);
       // 3 initial + 3 after invalidation = 6
       expect(mockModbusClient.readHoldingRegisters).toHaveBeenCalledTimes(6);
+    });
+  });
+
+  describe('write retries', () => {
+    it('does not retry a failed write', async () => {
+      mockModbusClient.writeRegister.mockRejectedValueOnce(new Error('Timed out'));
+
+      await expect(client.setPower(true)).rejects.toThrow('Timed out');
+
+      expect(mockModbusClient.writeRegister).toHaveBeenCalledTimes(1);
+      expect(mockModbusClient.connectTCP).toHaveBeenCalledTimes(1);
+      expect(log.error).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -345,7 +397,20 @@ describe('ModbusClient', () => {
 
       expect(mockModbusClient.connectTCP).toHaveBeenCalledWith('192.168.88.5', { port: 502 });
       expect(mockModbusClient.setID).toHaveBeenCalledWith(20);
-      expect(mockModbusClient.setTimeout).toHaveBeenCalledWith(10000);
+      expect(mockModbusClient.setTimeout).toHaveBeenCalledWith(3000);
+    });
+
+    it('logs the first connection at info and reconnects at debug', async () => {
+      await client.setPower(true);
+      expect(log.info).toHaveBeenCalledWith('Connected to 192.168.88.5:502 (slave 20)');
+
+      vi.clearAllMocks();
+      mockModbusClient.writeRegister.mockRejectedValueOnce(new Error('Timed out'));
+      await expect(client.setPower(true)).rejects.toThrow('Timed out');
+      await client.setPower(true);
+
+      expect(log.info).not.toHaveBeenCalledWith(expect.stringContaining('Connected to'));
+      expect(log.debug).toHaveBeenCalledWith('Connected to 192.168.88.5:502 (slave 20)');
     });
 
     it('throws and logs on connection failure', async () => {
