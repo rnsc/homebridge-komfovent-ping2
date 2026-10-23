@@ -49,9 +49,10 @@ export class ModbusClient {
   private statusInFlight = false;
   private failureCount = 0;
   private nextRetryTime = 0;
+  private hasConnectedBefore = false;
   private static readonly STATUS_CACHE_TTL_MS = 5000;
   private static readonly CONNECT_TIMEOUT_MS = 5000;
-  private static readonly REQUEST_TIMEOUT_MS = 10000;
+  private static readonly REQUEST_TIMEOUT_MS = 3000;
   private static readonly BACKOFF_BASE_MS = 2000;
   private static readonly BACKOFF_MAX_MS = 60000;
   private readonly device: NormalizedDevice;
@@ -72,17 +73,35 @@ export class ModbusClient {
     return result;
   }
 
-  // Wraps a Modbus operation with connection handling and uniform error recovery
-  private async withConnection<T>(label: string, operation: () => Promise<T>): Promise<T> {
-    try {
-      await this.ensureConnection();
-      return await operation();
-    } catch (error) {
-      this.connected = false;
-      this.closeExistingConnection();
-      this.invalidateCache();
-      this.log.error(`Failed to ${label}:`, error);
-      throw error;
+  private static errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+  }
+
+  private resetConnection(): void {
+    this.connected = false;
+    this.closeExistingConnection();
+    this.invalidateCache();
+  }
+
+  // Wraps a Modbus operation with connection handling and uniform error recovery.
+  // `attempts` > 1 retries on a fresh connection; only the final failure is logged as an error.
+  private async withConnection<T>(label: string, operation: () => Promise<T>, attempts = 1): Promise<T> {
+    for (let attempt = 1; ; attempt++) {
+      let connecting = true;
+      try {
+        await this.ensureConnection();
+        connecting = false;
+        return await operation();
+      } catch (error) {
+        this.resetConnection();
+        const message = `Failed to ${label}: ${ModbusClient.errorMessage(error)}`;
+        // Connection failures already have backoff; only a failed operation is worth a fresh-socket retry
+        if (connecting || attempt >= attempts) {
+          this.log.error(message);
+          throw error;
+        }
+        this.log.debug(`${message} (retrying on a fresh connection)`);
+      }
     }
   }
 
@@ -137,7 +156,13 @@ export class ModbusClient {
       this.connected = true;
       this.failureCount = 0;
       this.nextRetryTime = 0;
-      this.log.info(`Connected to ${this.device.host}:${this.device.port} (slave ${this.device.slaveId})`);
+      const connectedMsg = `Connected to ${this.device.host}:${this.device.port} (slave ${this.device.slaveId})`;
+      if (this.hasConnectedBefore) {
+        this.log.debug(connectedMsg);
+      } else {
+        this.log.info(connectedMsg);
+        this.hasConnectedBefore = true;
+      }
     } catch (error) {
       this.failureCount++;
       const backoff = Math.min(
@@ -146,9 +171,9 @@ export class ModbusClient {
       );
       this.nextRetryTime = Date.now() + backoff;
       this.closeExistingConnection();
+      const retryIn = Math.round(backoff / 1000);
       this.log.error(
-        `Failed to connect to ${this.device.host}:${this.device.port} (retry in ${Math.round(backoff / 1000)}s):`,
-        error,
+        `Failed to connect to ${this.device.host}:${this.device.port} (retry in ${retryIn}s): ${ModbusClient.errorMessage(error)}`,
       );
       throw error;
     }
@@ -182,7 +207,7 @@ export class ModbusClient {
       this.log.debug(`Status: active=${status.active}, mode2Speed=${status.mode2Speed}%,`
         + ` supplyAirTemp=${status.supplyAirTemp}°C, setpointTemp=${status.setpointTemp}°C`);
       return status;
-    }));
+    }, 2));
 
     this.statusPromise = promise;
     // Start the TTL window on completion (not enqueue) and drop a failed read from the cache
@@ -275,10 +300,8 @@ export class ModbusClient {
         const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(date).padStart(2, '0')}`;
         this.log.info(`Clock synced to ${dateStr} ${timeStr}${tz ? ` (${tz})` : ''}`);
       } catch (error) {
-        this.connected = false;
-        this.closeExistingConnection();
-        this.invalidateCache();
-        this.log.error('Failed to sync clock:', error);
+        this.resetConnection();
+        this.log.error(`Failed to sync clock: ${ModbusClient.errorMessage(error)}`);
         throw error;
       }
     });
